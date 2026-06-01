@@ -119,7 +119,9 @@ class _CatalogTabState extends State<CatalogTab> {
 
 class _SectionsCarousel extends StatefulWidget {
   const _SectionsCarousel({required this.sections});
+
   final List<ApiItem> sections;
+
   @override
   State<_SectionsCarousel> createState() => _SectionsCarouselState();
 }

@@ -56,25 +56,10 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                     final product = _items[index];
                     return ProductCard(
                       product: product,
+                      quantity: state.getProductQuantity(product.id),
+                      onUpdateQuantity: (delta) => state.updateCartQuantity(product, delta),
                       onAdd: () {
-                        if (state.isInCart(product.id)) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Already exists in the cart'),
-                              duration: Duration(seconds: 2),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                          return;
-                        }
                         state.addToCart(product);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${product.title} added to cart'),
-                            duration: const Duration(seconds: 1),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
                       },
                       onFavourite: () async {
                         if (state.isFavourite(product.id)) {
@@ -82,11 +67,8 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                         } else {
                           await state.addToFavourites(product);
                         }
-                        // لا نظهر SnackBar هنا لتجنب تكرار الرسائل المزعجة
-                        // التغيير البصري (القلب الأحمر) يكفي
                       },
                       isFavourite: state.isFavourite(product.id),
-                      isInCart: state.isInCart(product.id),
                       onOpen: () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => ProductDetailsScreen(product: product),

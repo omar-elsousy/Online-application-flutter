@@ -9,7 +9,8 @@ class ProductCard extends StatelessWidget {
     required this.onOpen,
     this.onFavourite,
     this.isFavourite = false,
-    this.isInCart = false,
+    this.quantity = 0,
+    this.onUpdateQuantity,
   });
 
   final ApiItem product;
@@ -17,7 +18,10 @@ class ProductCard extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback? onFavourite;
   final bool isFavourite;
-  final bool isInCart;
+  final int quantity;
+  final Function(int delta)? onUpdateQuantity;
+
+  bool get isInCart => quantity > 0;
 
   @override
   Widget build(BuildContext context) {
@@ -107,18 +111,41 @@ class ProductCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: IconButton.filledTonal(
-                      onPressed: isInCart ? null : onAdd,
-                      icon: Icon(
-                        isInCart ? Icons.shopping_cart : Icons.add_shopping_cart,
-                        size: 20,
-                        color: isInCart ? Colors.grey : null,
-                      ),
-                      style: IconButton.styleFrom(
-                        minimumSize: const Size(0, 42),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
+                    child: isInCart
+                        ? Container(
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  icon: const Icon(Icons.remove, size: 18),
+                                  onPressed: () => onUpdateQuantity?.call(-1),
+                                ),
+                                Text(
+                                  '$quantity',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  icon: const Icon(Icons.add, size: 18),
+                                  onPressed: () => onUpdateQuantity?.call(1),
+                                ),
+                              ],
+                            ),
+                          )
+                        : IconButton.filledTonal(
+                            onPressed: onAdd,
+                            icon: const Icon(Icons.add_shopping_cart, size: 20),
+                            style: IconButton.styleFrom(
+                              minimumSize: const Size(0, 42),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
                   ),
                   if (onFavourite != null) ...[
                     const SizedBox(width: 8),

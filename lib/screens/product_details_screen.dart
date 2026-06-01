@@ -102,25 +102,41 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: (state.isLoading || state.isInCart(item.id)) ? null : () {
-                          state.addToCart(item);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Added to cart'),
-                              duration: const Duration(seconds: 1),
-                              behavior: SnackBarBehavior.floating,
+                      child: state.isInCart(item.id)
+                          ? Container(
+                              height: 54,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.remove),
+                                    onPressed: state.isLoading ? null : () => state.updateCartQuantity(item, -1),
+                                  ),
+                                  Text(
+                                    '${state.getProductQuantity(item.id)} IN CART',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.add),
+                                    onPressed: state.isLoading ? null : () => state.updateCartQuantity(item, 1),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ElevatedButton.icon(
+                              onPressed: state.isLoading ? null : () => state.addToCart(item),
+                              icon: const Icon(Icons.add_shopping_cart),
+                              label: const Text('ADD TO CART'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.all(16),
+                                textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              ),
                             ),
-                          );
-                        },
-                        icon: Icon(state.isInCart(item.id) ? Icons.check_circle_outline : Icons.add_shopping_cart),
-                        label: Text(state.isInCart(item.id) ? 'ALREADY IN CART' : 'ADD TO CART'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.all(16),
-                          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(

@@ -18,6 +18,15 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _tab = 0;
 
+  // مفاتيح الـ Navigator لكل تبويب لضمان استقلال التنقل
+  final List<GlobalKey<NavigatorState>> _navigatorKeys = [
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+  ];
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -40,39 +49,61 @@ class _HomeScreenState extends State<HomeScreen> {
       const ProfileTab(),
     ];
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mansour'),
-        actions: [
-          IconButton(
-            tooltip: 'Refresh',
-            onPressed: state.isLoading ? null : state.loadHome,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
-      body: pages[_tab],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (value) {
-          state.clearError(); // مسح أي رسالة عالقة عند التنقل بين الـ Tabs
-          setState(() => _tab = value);
-        },
-        destinations: [
-          const NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-          const NavigationDestination(icon: Icon(Icons.track_changes_outlined), selectedIcon: Icon(Icons.track_changes), label: 'Target'),
-          NavigationDestination(
-            icon: Badge.count(
-              count: state.cartCount,
-              isLabelVisible: state.cartCount > 0,
-              child: const Icon(Icons.shopping_cart_outlined),
+    return WillPopScope(
+      onWillPop: () async {
+        final isFirstRouteInCurrentTab = !await _navigatorKeys[_tab].currentState!.maybePop();
+        if (isFirstRouteInCurrentTab) {
+          if (_tab != 0) {
+            setState(() => _tab = 0);
+            return false;
+          }
+        }
+        return isFirstRouteInCurrentTab;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Mansour'),
+          actions: [
+            IconButton(
+              tooltip: 'Refresh',
+              onPressed: state.isLoading ? null : state.loadHome,
+              icon: const Icon(Icons.refresh),
             ),
-            selectedIcon: const Icon(Icons.shopping_cart),
-            label: 'Cart',
-          ),
-          const NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long), label: 'Orders'),
-          const NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
-        ],
+          ],
+        ),
+        body: IndexedStack(
+          index: _tab,
+          children: List.generate(pages.length, (index) {
+            return Navigator(
+              key: _navigatorKeys[index],
+              onGenerateRoute: (routeSettings) {
+                return MaterialPageRoute(builder: (_) => pages[index]);
+              },
+            );
+          }),
+        ),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _tab,
+          onDestinationSelected: (value) {
+            state.clearError(); // مسح أي رسالة عالقة عند التنقل بين الـ Tabs
+            setState(() => _tab = value);
+          },
+          destinations: [
+            const NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
+            const NavigationDestination(icon: Icon(Icons.track_changes_outlined), selectedIcon: Icon(Icons.track_changes), label: 'Target'),
+            NavigationDestination(
+              icon: Badge.count(
+                count: state.cartCount,
+                isLabelVisible: state.cartCount > 0,
+                child: const Icon(Icons.shopping_cart_outlined),
+              ),
+              selectedIcon: const Icon(Icons.shopping_cart),
+              label: 'Cart',
+            ),
+            const NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long), label: 'Orders'),
+            const NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
+          ],
+        ),
       ),
     );
   }

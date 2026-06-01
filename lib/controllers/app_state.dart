@@ -40,6 +40,11 @@ class AppState extends ChangeNotifier {
     return cart.any((line) => line.product.id == productId);
   }
 
+  int getProductQuantity(String productId) {
+    final index = cart.indexWhere((l) => l.product.id == productId);
+    return index != -1 ? cart[index].quantity : 0;
+  }
+
   void clearError() {
     if (error != null) {
       error = null;

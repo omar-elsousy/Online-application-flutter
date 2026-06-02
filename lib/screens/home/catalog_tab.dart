@@ -4,6 +4,9 @@ import '../../controllers/app_scope.dart';
 import '../../models/api_item.dart';
 import '../../widgets/app_error_banner.dart';
 import '../category_products_screen.dart';
+import '../latest_offers_screen.dart';
+import '../product_details_screen.dart';
+import '../../widgets/product_card.dart';
 
 class CatalogTab extends StatefulWidget {
   const CatalogTab({super.key});
@@ -47,6 +50,54 @@ class _CatalogTabState extends State<CatalogTab> {
           else
             _SectionsCarousel(sections: state.sections),
           const SizedBox(height: 22),
+          
+          _SectionHeader(
+            title: 'Latest Offers', 
+            action: 'View All',
+            onActionTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const LatestOffersScreen()),
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (state.latestOffers.isEmpty)
+            const _EmptyState(message: 'No offers available.')
+          else
+            SizedBox(
+              height: 300,
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                scrollDirection: Axis.horizontal,
+                itemCount: state.latestOffers.length,
+                itemBuilder: (context, index) {
+                  final product = state.latestOffers[index];
+                  return Container(
+                    width: 220,
+                    margin: const EdgeInsets.only(right: 12),
+                    child: ProductCard(
+                      product: product,
+                      quantity: state.getProductQuantity(product.id),
+                      onUpdateQuantity: (delta) => state.updateCartQuantity(product, delta),
+                      isFavourite: state.isFavourite(product.id),
+                      onFavourite: () async {
+                        if (state.isFavourite(product.id)) {
+                          await state.removeFromFavourites(product);
+                        } else {
+                          await state.addToFavourites(product);
+                        }
+                      },
+                      onAdd: () => state.addToCart(product),
+                      onOpen: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ProductDetailsScreen(product: product),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          const SizedBox(height: 22),
+
           _SectionHeader(title: 'Categories', action: '${filteredCategories.length} found'),
           const SizedBox(height: 10),
           if (filteredCategories.isEmpty)
@@ -222,15 +273,19 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, required this.action});
+  const _SectionHeader({required this.title, required this.action, this.onActionTap});
   final String title;
   final String action;
+  final VoidCallback? onActionTap;
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         Expanded(child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900))),
-        Text(action, style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+        InkWell(
+          onTap: onActionTap,
+          child: Text(action, style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+        ),
       ],
     );
   }

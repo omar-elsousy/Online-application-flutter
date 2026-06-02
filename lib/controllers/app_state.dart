@@ -11,6 +11,7 @@ class AppState extends ChangeNotifier {
   final ApiClient apiClient;
   final List<ApiItem> categories = [];
   final List<ApiItem> sections = [];
+  final List<ApiItem> latestOffers = [];
   final List<ApiItem> orders = [];
   final List<ApiItem> ordersHistory = [];
   final List<ApiItem> favourites = [];
@@ -96,7 +97,9 @@ class AppState extends ChangeNotifier {
         apiClient.get(ApiEndpoints.getUserOrdersHistory).catchError((_) => []),
         apiClient.get(ApiEndpoints.getTarget).catchError((_) => {'data': {}}),
         apiClient.get(ApiEndpoints.getFavourites).catchError((_) => []),
+        apiClient.get(ApiEndpoints.getLatestOffers).catchError((_) => []),
       ]);
+
       sections..clear()..addAll(parseItems(results[0]));
       categories..clear()..addAll(parseItems(results[1]));
 
@@ -121,6 +124,7 @@ class AppState extends ChangeNotifier {
       }
 
       favourites..clear()..addAll(parseItems(results[6]));
+      latestOffers..clear()..addAll(parseItems(results[7]));
     });
     
     _isFetching = false;

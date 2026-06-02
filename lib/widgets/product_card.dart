@@ -30,7 +30,7 @@ class ProductCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         onTap: onOpen,
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -38,13 +38,13 @@ class ProductCard extends StatelessWidget {
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
+                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.4),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: product.imageUrl == null
                       ? Icon(
                           Icons.inventory_2_outlined,
-                          size: 48,
+                          size: 44,
                           color: Theme.of(context).colorScheme.primary,
                         )
                       : ClipRRect(
@@ -60,27 +60,23 @@ class ProductCard extends StatelessWidget {
                         ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(
                 product.title,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                    ),
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
               ),
-              const SizedBox(height: 4),
               Text(
                 'ID: ${product.id}',
-                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                style: const TextStyle(fontSize: 10, color: Colors.grey),
               ),
               const SizedBox(height: 4),
               if (product.raw['status'] != null)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: product.raw['status'].toString().contains('in stock')
+                    color: product.raw['status'].toString().toLowerCase().contains('in stock')
                         ? Colors.green.withOpacity(0.1)
                         : Colors.orange.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
@@ -88,51 +84,54 @@ class ProductCard extends StatelessWidget {
                   child: Text(
                     product.raw['status'].toString().toUpperCase(),
                     style: TextStyle(
-                      color: product.raw['status'].toString().contains('in stock')
+                      color: product.raw['status'].toString().toLowerCase().contains('in stock')
                           ? Colors.green
                           : Colors.orange,
-                      fontSize: 10,
+                      fontSize: 9,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 product.price == null
-                    ? 'Tap for details'
+                    ? 'N/A'
                     : '${product.price!.toStringAsFixed(2)} EGP',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 13,
                 ),
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
+                    flex: 5,
                     child: isInCart
                         ? Container(
-                            height: 42,
+                            height: 38,
                             decoration: BoxDecoration(
                               color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 IconButton(
+                                  constraints: const BoxConstraints(),
                                   padding: EdgeInsets.zero,
-                                  icon: const Icon(Icons.remove, size: 18),
+                                  icon: const Icon(Icons.remove, size: 14),
                                   onPressed: () => onUpdateQuantity?.call(-1),
                                 ),
                                 Text(
                                   '$quantity',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                                 ),
                                 IconButton(
+                                  constraints: const BoxConstraints(),
                                   padding: EdgeInsets.zero,
-                                  icon: const Icon(Icons.add, size: 18),
+                                  icon: const Icon(Icons.add, size: 14),
                                   onPressed: () => onUpdateQuantity?.call(1),
                                 ),
                               ],
@@ -140,33 +139,42 @@ class ProductCard extends StatelessWidget {
                           )
                         : IconButton.filledTonal(
                             onPressed: onAdd,
-                            icon: const Icon(Icons.add_shopping_cart, size: 20),
+                            icon: const Icon(Icons.add_shopping_cart, size: 16),
                             style: IconButton.styleFrom(
-                              minimumSize: const Size(0, 42),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              minimumSize: const Size(0, 38),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
                           ),
                   ),
                   if (onFavourite != null) ...[
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 4),
                     Expanded(
-                      child: OutlinedButton.icon(
+                      flex: 6,
+                      child: OutlinedButton(
                         onPressed: onFavourite,
-                        icon: Icon(
-                          isFavourite ? Icons.favorite : Icons.favorite_border,
-                          size: 16,
-                          color: isFavourite ? Colors.red : Colors.grey,
-                        ),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: isFavourite ? Colors.red : Colors.grey,
-                          side: BorderSide(color: isFavourite ? Colors.red : Colors.grey.shade300),
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(0, 42),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          foregroundColor: isFavourite ? Colors.red : Colors.blue,
+                          side: BorderSide(color: isFavourite ? Colors.red : Colors.blue.withOpacity(0.3)),
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          minimumSize: const Size(0, 38),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        label: Text(
-                          isFavourite ? 'UNFAV' : 'FAV',
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                        child: FittedBox(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isFavourite ? Icons.favorite : Icons.favorite_border,
+                                size: 14,
+                                color: Colors.red,
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                isFavourite ? 'Remove' : 'Add Fav',
+                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

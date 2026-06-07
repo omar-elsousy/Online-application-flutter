@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../controllers/app_scope.dart';
 import '../favourites_screen.dart';
+import '../privacy_policy_screen.dart';
+import '../contact_us_screen.dart';
+import 'target_tab.dart';
+import 'orders_tab.dart';
 
 class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key});
@@ -18,28 +22,54 @@ class ProfileTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.lock_outline, color: Colors.blue),
-            title: const Text('Change Password'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showChangePasswordDialog(context),
+        _ProfileTile(
+          icon: Icons.track_changes,
+          title: 'My Target',
+          color: Colors.orange,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('My Target')), body: const TargetTab())),
           ),
         ),
-        const SizedBox(height: 12),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.favorite, color: Colors.red),
-            title: const Text('My Favourites'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const FavouritesScreen()),
-              );
-            },
+        _ProfileTile(
+          icon: Icons.receipt_long,
+          title: 'My Orders',
+          color: Colors.green,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('My Orders')), body: const OrdersTab())),
           ),
         ),
-        const SizedBox(height: 12),
+        _ProfileTile(
+          icon: Icons.lock_outline,
+          title: 'Change Password',
+          color: Colors.blue,
+          onTap: () => _showChangePasswordDialog(context),
+        ),
+        _ProfileTile(
+          icon: Icons.favorite,
+          title: 'My Favourites',
+          color: Colors.red,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const FavouritesScreen()),
+          ),
+        ),
+        const Divider(height: 32),
+        _ProfileTile(
+          icon: Icons.privacy_tip_outlined,
+          title: 'Privacy & Policy',
+          color: Colors.blueGrey,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+          ),
+        ),
+        _ProfileTile(
+          icon: Icons.contact_support_outlined,
+          title: 'Contact Us',
+          color: Colors.teal,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ContactUsScreen()),
+          ),
+        ),
+        const SizedBox(height: 24),
         ElevatedButton.icon(
           onPressed: state.isLoading ? null : state.logout,
           icon: const Icon(Icons.logout),
@@ -116,6 +146,33 @@ class ProfileTab extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _ProfileTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ProfileTile({
+    required this.icon,
+    required this.title,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Icon(icon, color: color),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        trailing: const Icon(Icons.chevron_right, size: 20),
+        onTap: onTap,
+      ),
     );
   }
 }

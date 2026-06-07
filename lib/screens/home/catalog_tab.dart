@@ -4,6 +4,7 @@ import '../../controllers/app_scope.dart';
 import '../../models/api_item.dart';
 import '../../widgets/app_error_banner.dart';
 import '../category_products_screen.dart';
+import '../company_categories_screen.dart';
 import '../latest_offers_screen.dart';
 import '../product_details_screen.dart';
 import '../../widgets/product_card.dart';
@@ -98,10 +99,10 @@ class _CatalogTabState extends State<CatalogTab> {
             ),
           const SizedBox(height: 22),
 
-          _SectionHeader(title: 'Categories', action: '${filteredCategories.length} found'),
+          _SectionHeader(title: 'Companies', action: '${state.companies.length} found'),
           const SizedBox(height: 10),
-          if (filteredCategories.isEmpty)
-            const _EmptyState(message: 'No categories match your search.')
+          if (state.companies.isEmpty)
+            const _EmptyState(message: 'No companies found.')
           else
             GridView.builder(
               shrinkWrap: true,
@@ -112,13 +113,13 @@ class _CatalogTabState extends State<CatalogTab> {
                 mainAxisSpacing: 12,
                 childAspectRatio: 0.9,
               ),
-              itemCount: filteredCategories.length,
+              itemCount: state.companies.length,
               itemBuilder: (_, index) {
-                final category = filteredCategories[index];
+                final company = state.companies[index];
                 return InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => CategoryProductsScreen(category: category)),
+                    MaterialPageRoute(builder: (_) => CompanyCategoriesScreen(company: company)),
                   ),
                   child: Card(
                     child: Padding(
@@ -133,23 +134,19 @@ class _CatalogTabState extends State<CatalogTab> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             clipBehavior: Clip.antiAlias,
-                            child: category.imageUrl == null || category.imageUrl!.isEmpty
-                                ? const Icon(Icons.category_outlined, size: 28, color: Colors.grey)
+                            child: company.imageUrl == null || company.imageUrl!.isEmpty
+                                ? const Icon(Icons.business_outlined, size: 28, color: Colors.grey)
                                 : Image.network(
-                                    category.imageUrl!,
+                                    company.imageUrl!,
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, size: 28, color: Colors.grey),
-                                    loadingBuilder: (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
-                                      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-                                    },
                                   ),
                           ),
                           const SizedBox(height: 8),
                           Expanded(
                             child: Text(
-                              category.title,
-                              maxLines: 3,
+                              company.title,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
                               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),

@@ -20,8 +20,8 @@ class ApiItem {
   final Map<String, dynamic> raw;
 
   factory ApiItem.fromJson(Map<String, dynamic> json) {
-    final id = _first(json, ['product_id', 'id', 'order_id', 'family_id', 'code', 'item_id']) ?? '';
-    final title = _first(json, [
+    final id = _first(json, ['company_id', 'product_id', 'id', 'order_id', 'family_id', 'code', 'item_id']) ?? '';
+    final titleValue = _first(json, [
           'name',
           'title',
           'product_name',
@@ -30,6 +30,14 @@ class ApiItem {
           'description_ar',
         ]) ??
         'Order #${id.toString()}';
+
+    // تصحيح أسماء الشركات التقنية
+    String title = titleValue.toString();
+    if (title == 'ITG_loose_tobacco') {
+      title = 'Loose Tobacco';
+    } else {
+      title = title.replaceAll('_', ' '); // استبدال أي _ بمسافة عامةً
+    }
     final subtitle = _first(json, ['status', 'category', 'brand', 'short_description', 'created_at']);
     final description = _first(json, ['description', 'details', 'notes']);
     var imageUrl = _first(json, ['image', 'image_url', 'photo', 'thumbnail'])?.toString();

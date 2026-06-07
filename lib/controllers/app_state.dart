@@ -9,6 +9,7 @@ class AppState extends ChangeNotifier {
   AppState({ApiClient? apiClient}) : apiClient = apiClient ?? ApiClient();
 
   final ApiClient apiClient;
+  final List<ApiItem> companies = [];
   final List<ApiItem> categories = [];
   final List<ApiItem> sections = [];
   final List<ApiItem> latestOffers = [];
@@ -98,6 +99,7 @@ class AppState extends ChangeNotifier {
         apiClient.get(ApiEndpoints.getTarget).catchError((_) => {'data': {}}),
         apiClient.get(ApiEndpoints.getFavourites).catchError((_) => []),
         apiClient.get(ApiEndpoints.getLatestOffers).catchError((_) => []),
+        apiClient.get(ApiEndpoints.companies).catchError((_) => []),
       ]);
 
       sections..clear()..addAll(parseItems(results[0]));
@@ -125,6 +127,7 @@ class AppState extends ChangeNotifier {
 
       favourites..clear()..addAll(parseItems(results[6]));
       latestOffers..clear()..addAll(parseItems(results[7]));
+      companies..clear()..addAll(parseItems(results[8]));
     });
     
     _isFetching = false;
@@ -231,6 +234,11 @@ class AppState extends ChangeNotifier {
 
   Future<List<ApiItem>> loadProductsByCategory(ApiItem category) async {
     final payload = await apiClient.get('${ApiEndpoints.productsByCategory}/${category.id}');
+    return parseItems(payload);
+  }
+
+  Future<List<ApiItem>> loadCategoriesByCompany(String companyId) async {
+    final payload = await apiClient.get('${ApiEndpoints.companyCategories}/$companyId/categories');
     return parseItems(payload);
   }
 

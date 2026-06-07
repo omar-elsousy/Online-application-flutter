@@ -49,4 +49,6 @@ class ApiEndpoints {
   static const String getFavourites = '/getFavourites';
   static const String changePassword = '/changePassword';
   static const String getLatestOffers = '/getLatestOffers';
+  static const String companies = '/companies';
+  static const String companyCategories = '/companies'; // سيتم إضافة /{id}/categories يدوياً
 }

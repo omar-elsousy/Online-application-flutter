@@ -14,9 +14,17 @@ class CartTab extends StatelessWidget {
 
     return Column(
       children: [
+        // 1. قسم التنبيهات في الأعلى تماماً
+        if (state.error != null)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: AppErrorBanner(message: state.error!),
+          ),
+
+        // 2. قائمة المنتجات (تأخذ المساحة المتاحة فقط بين التنبيه والزرار)
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
             itemCount: state.cart.length,
             itemBuilder: (context, index) {
               final line = state.cart[index];
@@ -27,10 +35,6 @@ class CartTab extends StatelessWidget {
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     children: [
-                      if (state.error != null) ...[
-                        AppErrorBanner(message: state.error!),
-                        const SizedBox(height: 10),
-                      ],
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -41,7 +45,9 @@ class CartTab extends StatelessWidget {
                                 children: [
                                   IconButton(
                                     onPressed: state.isLoading ? null : () => state.updateCartQuantity(product, -1),
-                                    icon: Icon(Icons.remove_circle_outline, color: state.isLoading ? Colors.grey : Theme.of(context).colorScheme.primary, size: 28),
+                                    icon: Icon(Icons.remove_circle_outline, 
+                                      color: state.isLoading ? Colors.grey : Theme.of(context).colorScheme.primary, 
+                                      size: 28),
                                   ),
                                   InkWell(
                                     onTap: state.isLoading ? null : () => AppDialogs.showQuantityDialog(context, state, product, line.quantity),
@@ -55,7 +61,9 @@ class CartTab extends StatelessWidget {
                                   ),
                                   IconButton(
                                     onPressed: state.isLoading ? null : () => state.updateCartQuantity(product, 1),
-                                    icon: Icon(Icons.add_circle_outline, color: state.isLoading ? Colors.grey : Theme.of(context).colorScheme.primary, size: 28),
+                                    icon: Icon(Icons.add_circle_outline, 
+                                      color: state.isLoading ? Colors.grey : Theme.of(context).colorScheme.primary, 
+                                      size: 28),
                                   ),
                                 ],
                               ),
@@ -136,28 +144,34 @@ class CartTab extends StatelessWidget {
             },
           ),
         ),
+
+        // 3. قسم الدفع (Checkout) مثبت دائماً في الأسفل وبدون تداخل
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: const Offset(0, -2))],
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -5)
+              )
+            ],
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
           ),
           child: SafeArea(
+            top: false, // لضمان الالتصاق بأسفل الشاشة الحقيقي
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Number of Products', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                    Text(
-                      '${state.serverCartCount}',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
+                    const Text('Number of Products', style: TextStyle(fontSize: 15, color: Colors.grey)),
+                    Text('${state.serverCartCount}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -172,28 +186,27 @@ class CartTab extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: state.cart.isEmpty || state.isLoading
+                    onPressed: (state.cart.isEmpty || state.isLoading)
                         ? null
                         : () async {
                             final orderId = await state.checkout();
-                            if (context.mounted) {
-                              if (orderId != null) {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (_) => OrderDetailsScreen(orderId: orderId)),
-                                );
-                              } else if (state.error != null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  AppErrorBanner(message: state.error!).asSnackBar(),
-                                );
-                              }
+                            if (context.mounted && orderId != null) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => OrderDetailsScreen(orderId: orderId)),
+                              );
                             }
+                            // لاحظ: حذفنا الـ SnackBar هنا لأن الرسالة تظهر بالفعل في الأعلى تلقائياً
                           },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.all(16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
                     child: state.isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                         : const Text('CHECKOUT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                   ),
                 ),

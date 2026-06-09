@@ -23,7 +23,11 @@ class _CatalogTabState extends State<CatalogTab> {
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
     
-    final filteredCategories = state.categories
+    final filteredCompanies = state.companies
+        .where((item) => item.title.toLowerCase().contains(query.toLowerCase()))
+        .toList();
+
+    final filteredLatestOffers = state.latestOffers
         .where((item) => item.title.toLowerCase().contains(query.toLowerCase()))
         .toList();
 
@@ -35,7 +39,7 @@ class _CatalogTabState extends State<CatalogTab> {
           TextField(
             onChanged: (value) => setState(() => query = value),
             decoration: const InputDecoration(
-              hintText: 'Search categories',
+              hintText: 'Search for products or companies',
               prefixIcon: Icon(Icons.search),
             ),
           ),
@@ -44,35 +48,37 @@ class _CatalogTabState extends State<CatalogTab> {
             AppErrorBanner(message: state.error!),
             const SizedBox(height: 14),
           ],
-          _SectionHeader(title: 'Sections', action: '${state.sections.length} found'),
-          const SizedBox(height: 10),
-          if (state.sections.isEmpty)
-            const _EmptyState(message: 'No sections returned yet.')
-          else
-            _SectionsCarousel(sections: state.sections),
-          const SizedBox(height: 22),
           
-          _SectionHeader(
-            title: 'Latest Offers', 
-            action: 'View All',
-            onActionTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const LatestOffersScreen()),
+          // إخفاء الـ Carousel عند البحث لترك مساحة لنتائج البحث
+          if (query.isEmpty) ...[
+            _SectionHeader(title: 'Sections', action: '${state.sections.length} found'),
+            const SizedBox(height: 10),
+            if (state.sections.isEmpty)
+              const _EmptyState(message: 'No sections returned yet.')
+            else
+              _SectionsCarousel(sections: state.sections),
+            const SizedBox(height: 22),
+          ],
+          
+          if (filteredLatestOffers.isNotEmpty) ...[
+            _SectionHeader(
+              title: 'Latest Offers', 
+              action: 'View All',
+              onActionTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const LatestOffersScreen()),
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          if (state.latestOffers.isEmpty)
-            const _EmptyState(message: 'No offers available.')
-          else
+            const SizedBox(height: 10),
             SizedBox(
               height: 300,
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 scrollDirection: Axis.horizontal,
-                itemCount: state.latestOffers.length,
+                itemCount: filteredLatestOffers.length,
                 itemBuilder: (context, index) {
-                  final product = state.latestOffers[index];
+                  final product = filteredLatestOffers[index];
                   return Container(
-                    width: 220,
+                    width: 220, 
                     margin: const EdgeInsets.only(right: 12),
                     child: ProductCard(
                       product: product,
@@ -97,13 +103,12 @@ class _CatalogTabState extends State<CatalogTab> {
                 },
               ),
             ),
-          const SizedBox(height: 22),
+            const SizedBox(height: 22),
+          ],
 
-          _SectionHeader(title: 'Companies', action: '${state.companies.length} found'),
-          const SizedBox(height: 10),
-          if (state.companies.isEmpty)
-            const _EmptyState(message: 'No companies found.')
-          else
+          if (filteredCompanies.isNotEmpty) ...[
+            _SectionHeader(title: 'Companies', action: '${filteredCompanies.length} found'),
+            const SizedBox(height: 10),
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -113,9 +118,9 @@ class _CatalogTabState extends State<CatalogTab> {
                 mainAxisSpacing: 12,
                 childAspectRatio: 0.9,
               ),
-              itemCount: state.companies.length,
+              itemCount: filteredCompanies.length,
               itemBuilder: (_, index) {
-                final company = state.companies[index];
+                final company = filteredCompanies[index];
                 return InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () => Navigator.of(context).push(
@@ -159,6 +164,10 @@ class _CatalogTabState extends State<CatalogTab> {
                 );
               },
             ),
+          ],
+          
+          if (filteredCompanies.isEmpty && filteredLatestOffers.isEmpty)
+            const _EmptyState(message: 'No results found matching your search.'),
         ],
       ),
     );

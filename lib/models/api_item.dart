@@ -31,10 +31,12 @@ class ApiItem {
         ]) ??
         'Order #${id.toString()}';
 
-    // تصحيح أسماء الشركات التقنية
+    // تصحيح أسماء الشركات والكاتيجوريز التقنية
     String title = titleValue.toString();
-    if (title == 'ITG_loose_tobacco') {
-      title = 'Loose Tobacco';
+    if (title == 'ITG_loose_tobacco' || title == 'Loose Tobacco') {
+      title = 'Tobacco';
+    } else if (title == 'Davidoff Evolve') {
+      title = 'Evolve';
     } else {
       title = title.replaceAll('_', ' '); // استبدال أي _ بمسافة عامةً
     }

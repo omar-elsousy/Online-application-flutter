@@ -104,10 +104,11 @@ class ProductCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
+              // استخدام Row مع Expanded لضمان توزيع المساحة ومنع الأوفر فلو
               Row(
                 children: [
                   Expanded(
-                    flex: 5,
+                    flex: 1,
                     child: isInCart
                         ? Container(
                             height: 38,
@@ -115,26 +116,24 @@ class ProductCard extends StatelessWidget {
                               color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                IconButton(
-                                  constraints: const BoxConstraints(),
-                                  padding: EdgeInsets.zero,
-                                  icon: const Icon(Icons.remove, size: 14),
-                                  onPressed: () => onUpdateQuantity?.call(-1),
-                                ),
-                                Text(
-                                  '$quantity',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                                ),
-                                IconButton(
-                                  constraints: const BoxConstraints(),
-                                  padding: EdgeInsets.zero,
-                                  icon: const Icon(Icons.add, size: 14),
-                                  onPressed: () => onUpdateQuantity?.call(1),
-                                ),
-                              ],
+                            child: FittedBox(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.remove, size: 18),
+                                    onPressed: () => onUpdateQuantity?.call(-1),
+                                  ),
+                                  Text(
+                                    '$quantity',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.add, size: 18),
+                                    onPressed: () => onUpdateQuantity?.call(1),
+                                  ),
+                                ],
+                              ),
                             ),
                           )
                         : IconButton.filledTonal(
@@ -149,31 +148,38 @@ class ProductCard extends StatelessWidget {
                   if (onFavourite != null) ...[
                     const SizedBox(width: 4),
                     Expanded(
-                      flex: 6,
-                      child: OutlinedButton(
-                        onPressed: onFavourite,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: isFavourite ? Colors.red : Colors.blue,
-                          side: BorderSide(color: isFavourite ? Colors.red : Colors.blue.withOpacity(0.3)),
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          minimumSize: const Size(0, 38),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        child: FittedBox(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                isFavourite ? Icons.favorite : Icons.favorite_border,
-                                size: 14,
-                                color: Colors.red,
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                isFavourite ? 'Remove' : 'Add Fav',
-                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                              ),
-                            ],
+                      flex: 1,
+                      child: InkWell(
+                        onTap: onFavourite,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          height: 38,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: isFavourite ? Colors.red.withOpacity(0.5) : Colors.blue.withOpacity(0.2)),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  isFavourite ? Icons.favorite : Icons.favorite_border,
+                                  size: 16,
+                                  color: Colors.red,
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  isFavourite ? 'Remove' : 'Add Fav',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isFavourite ? Colors.red : Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

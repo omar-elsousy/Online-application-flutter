@@ -20,7 +20,7 @@ class ApiItem {
   final Map<String, dynamic> raw;
 
   factory ApiItem.fromJson(Map<String, dynamic> json) {
-    final id = _first(json, ['company_id', 'product_id', 'id', 'order_id', 'family_id', 'code', 'item_id']) ?? '';
+    final id = _first(json, ['action_id', 'company_id', 'product_id', 'id', 'order_id', 'family_id', 'code', 'item_id']) ?? '';
     final titleValue = _first(json, [
           'name',
           'title',
@@ -29,7 +29,7 @@ class ApiItem {
           'category_name',
           'description_ar',
         ]) ??
-        'Order #${id.toString()}';
+        'Details'; // تغيير القيمة الافتراضية لتكون عامة واحترافية
 
     // تصحيح أسماء الشركات والكاتيجوريز التقنية
     String title = titleValue.toString();

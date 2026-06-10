@@ -41,10 +41,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
     final item = _details ?? widget.product;
+    
+    // إذا كان الاسم لا يزال عبارة عن placeholder أو ID، نظهر Loading
+    final displayTitle = (item.title.contains('#') || item.title == 'Details') && _loading 
+        ? 'Loading Product...' 
+        : item.title;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(item.title),
+        title: Text(displayTitle),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())

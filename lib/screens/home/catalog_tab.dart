@@ -213,6 +213,20 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
     });
   }
 
+  void _handleSectionAction(BuildContext context, String type, String id, String actionName) {
+    if (type == 'product') {
+      final placeholderProduct = ApiItem(id: id, title: actionName);
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => ProductDetailsScreen(product: placeholderProduct)),
+      );
+    } else if (type == 'category') {
+      final placeholderCategory = ApiItem(id: id, title: actionName);
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => CategoryProductsScreen(category: placeholderCategory)),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -232,21 +246,40 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
             itemCount: widget.sections.length,
             itemBuilder: (_, index) {
               final section = widget.sections[index];
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: section.imageUrl == null
-                    ? Container(
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                        child: const Center(child: Icon(Icons.image_outlined, size: 36)),
-                      )
-                    : Image.network(
-                        section.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: Theme.of(context).colorScheme.primaryContainer,
-                          child: const Center(child: Icon(Icons.broken_image_outlined, size: 36)),
-                        ),
-                      ),
+              
+              final String? actionType = section.raw['action_type']?.toString();
+              final String? actionId = section.raw['action_id']?.toString();
+              
+              // استخدام الحقل الجديد action_name من الـ API الخاص بك
+              final String actionName = section.raw['action_name']?.toString() ?? section.title;
+
+              // التحقق من صلاحية الأكشن (يجب ألا يكون none وألا يكون الـ id فارغاً)
+              final bool isClickable = actionType != null && actionType != 'none' && actionId != null;
+
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: !isClickable 
+                    ? null 
+                    : () => _handleSectionAction(context, actionType, actionId, actionName),
+                  borderRadius: BorderRadius.circular(20),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: section.imageUrl == null
+                        ? Container(
+                            color: Theme.of(context).colorScheme.primaryContainer,
+                            child: const Center(child: Icon(Icons.image_outlined, size: 36)),
+                          )
+                        : Image.network(
+                            section.imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: Theme.of(context).colorScheme.primaryContainer,
+                              child: const Center(child: Icon(Icons.broken_image_outlined, size: 36)),
+                            ),
+                          ),
+                  ),
+                ),
               );
             },
           ),

@@ -7,11 +7,11 @@ import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 
 void main() {
-  runApp(DukankoApp(state: AppState()));
+  runApp(MansourApp(state: AppState()));
 }
 
-class DukankoApp extends StatelessWidget {
-  const DukankoApp({super.key, required this.state});
+class MansourApp extends StatelessWidget {
+  const MansourApp({super.key, required this.state});
 
   final AppState state;
 

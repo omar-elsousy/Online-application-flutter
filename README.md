@@ -1,10 +1,10 @@
-# Dukanko
+# Mansour
 
-A Flutter mobile sales application scaffold connected to the Dukanko Laravel API.
+A Flutter mobile sales application scaffold connected to the Mansour Laravel API.
 
 ## Naming
 
-The Flutter package/project name remains `dukan_ko` in `pubspec.yaml`. The user-facing app label is `Dukanko` on Android/iOS, which is safe because display labels do not need to match the Dart package name.
+The Flutter package/project name is `mansour` in `pubspec.yaml`. The user-facing app label is `Mansour` on Android/iOS.
 
 ## API configuration
 

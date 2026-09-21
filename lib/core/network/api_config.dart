@@ -3,7 +3,7 @@ class ApiConfig {
 
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.1.104.82:81/Online-application/public/api',
+    defaultValue: 'http://10.1.104.82:8000/api',
   );
 
   static String get baseImageUrl => baseUrl.replaceFirst('/api', '');
@@ -19,9 +19,9 @@ class ApiConfig {
       if (text.isNotEmpty) filteredQuery[key] = text;
     });
 
-    return Uri.parse('$normalizedBase$normalizedPath').replace(
-      queryParameters: filteredQuery.isEmpty ? null : filteredQuery,
-    );
+    return Uri.parse(
+      '$normalizedBase$normalizedPath',
+    ).replace(queryParameters: filteredQuery.isEmpty ? null : filteredQuery);
   }
 }
 
@@ -50,5 +50,14 @@ class ApiEndpoints {
   static const String changePassword = '/changePassword';
   static const String getLatestOffers = '/getLatestOffers';
   static const String companies = '/companies';
-  static const String companyCategories = '/companies'; // سيتم إضافة /{id}/categories يدوياً
+  static const String companyCategories =
+      '/companies'; // سيتم إضافة /{id}/categories يدوياً
+  static const String pointsSummary = '/points/summary';
+  static const String pointsGifts = '/points/gifts';
+  static const String pointsRedeem = '/points/redeem';
+  static const String pointsHistory = '/points/history';
+  static const String saveDeviceToken = '/saveDeviceToken';
+  static const String notifications = '/notifications';
+  static const String notificationsUnreadCount = '/notifications/unread-count';
+  static const String notificationsReadAll = '/notifications/read-all';
 }

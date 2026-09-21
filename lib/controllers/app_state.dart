@@ -4,6 +4,9 @@ import '../core/network/api_client.dart';
 import '../core/network/api_config.dart';
 import '../models/api_item.dart';
 import '../models/cart_line.dart';
+import '../models/point_models.dart';
+import '../models/app_notification.dart';
+import '../core/services/notification_service.dart';
 
 class AppState extends ChangeNotifier {
   AppState({ApiClient? apiClient}) : apiClient = apiClient ?? ApiClient();
@@ -17,13 +20,20 @@ class AppState extends ChangeNotifier {
   final List<ApiItem> ordersHistory = [];
   final List<ApiItem> favourites = [];
   final List<CartLine> cart = [];
+  final List<PointsGift> pointsGifts = [];
+  final List<PointsHistoryItem> pointsHistory = [];
+  final List<AppNotification> notifications = [];
+
+  int userPoints = 0;
+  int unreadNotificationsCount = 0;
+  PointsSummary? pointsSummary;
 
   bool isLoading = false;
   bool isBootstrapped = false;
   bool _isFetching = false;
   String? error;
   String? userMobile;
-  
+
   double serverCartTotal = 0;
   int serverCartCount = 0;
 
@@ -64,8 +74,12 @@ class AppState extends ChangeNotifier {
       apiClient.setToken(token);
       userMobile = mobile;
       isBootstrapped = false;
-      await loadHome();
     });
+
+    if (isAuthenticated) {
+      NotificationService.instance.syncDeviceToken(apiClient);
+      await loadHome();
+    }
   }
 
   Future<void> register({
@@ -88,7 +102,7 @@ class AppState extends ChangeNotifier {
   Future<void> loadHome() async {
     if (_isFetching) return;
     _isFetching = true;
-    
+
     await _guard(() async {
       final results = await Future.wait([
         apiClient.get(ApiEndpoints.sections).catchError((_) => []),
@@ -100,36 +114,72 @@ class AppState extends ChangeNotifier {
         apiClient.get(ApiEndpoints.getFavourites).catchError((_) => []),
         apiClient.get(ApiEndpoints.getLatestOffers).catchError((_) => []),
         apiClient.get(ApiEndpoints.companies).catchError((_) => []),
+        apiClient
+            .get(ApiEndpoints.pointsSummary)
+            .catchError((_) => {'data': {}}),
       ]);
 
-      sections..clear()..addAll(parseItems(results[0]));
-      categories..clear()..addAll(parseItems(results[1]));
+      sections
+        ..clear()
+        ..addAll(parseItems(results[0]));
+      categories
+        ..clear()
+        ..addAll(parseItems(results[1]));
 
       final cartData = results[2]['data'];
       if (cartData != null) {
-        serverCartTotal = double.tryParse(cartData['final_price']?.toString() ?? '0') ?? 0;
-        serverCartCount = int.tryParse(cartData['number_of_products']?.toString() ?? '0') ?? 0;
+        serverCartTotal =
+            double.tryParse(cartData['final_price']?.toString() ?? '0') ?? 0;
+        serverCartCount =
+            int.tryParse(cartData['number_of_products']?.toString() ?? '0') ??
+            0;
         final List<dynamic> items = cartData['items'] ?? [];
         cart.clear();
         for (var item in items) {
-          cart.add(CartLine(product: ApiItem.fromJson(item), quantity: int.tryParse(item['quantity']?.toString() ?? '1') ?? 1));
+          cart.add(
+            CartLine(
+              product: ApiItem.fromJson(item),
+              quantity: int.tryParse(item['quantity']?.toString() ?? '1') ?? 1,
+            ),
+          );
         }
       }
 
-      orders..clear()..addAll(parseItems(results[3]));
-      ordersHistory..clear()..addAll(parseItems(results[4]));
+      orders
+        ..clear()
+        ..addAll(parseItems(results[3]));
+      ordersHistory
+        ..clear()
+        ..addAll(parseItems(results[4]));
 
       final targetData = results[5]['data'];
       if (targetData != null) {
-        targetAchieved = double.tryParse(targetData['achieved']?.toString() ?? '0') ?? 0;
-        targetSales = double.tryParse(targetData['target_sales']?.toString() ?? '0') ?? 0;
+        targetAchieved =
+            double.tryParse(targetData['achieved']?.toString() ?? '0') ?? 0;
+        targetSales =
+            double.tryParse(targetData['target_sales']?.toString() ?? '0') ?? 0;
       }
 
-      favourites..clear()..addAll(parseItems(results[6]));
-      latestOffers..clear()..addAll(parseItems(results[7]));
-      companies..clear()..addAll(parseItems(results[8]));
+      favourites
+        ..clear()
+        ..addAll(parseItems(results[6]));
+      latestOffers
+        ..clear()
+        ..addAll(parseItems(results[7]));
+      companies
+        ..clear()
+        ..addAll(parseItems(results[8]));
+
+      final pointsData = results[9] is Map ? results[9]['data'] : null;
+      if (pointsData != null && pointsData is Map<String, dynamic>) {
+        pointsSummary = PointsSummary.fromJson(pointsData);
+        userPoints = pointsSummary!.points;
+      }
+
+      // تحميل الهدايا بشكل مستقل بعد التحميل الأساسي
+      loadPointsGifts();
     });
-    
+
     _isFetching = false;
   }
 
@@ -141,8 +191,12 @@ class AppState extends ChangeNotifier {
         apiClient.get(ApiEndpoints.getOrders).catchError((_) => []),
         apiClient.get(ApiEndpoints.getUserOrdersHistory).catchError((_) => []),
       ]);
-      orders..clear()..addAll(parseItems(results[0]));
-      ordersHistory..clear()..addAll(parseItems(results[1]));
+      orders
+        ..clear()
+        ..addAll(parseItems(results[0]));
+      ordersHistory
+        ..clear()
+        ..addAll(parseItems(results[1]));
     });
     _isFetching = false;
   }
@@ -150,10 +204,10 @@ class AppState extends ChangeNotifier {
   Future<void> cancelOrder(String orderId) async {
     await _guard(() async {
       await apiClient.post('${ApiEndpoints.cancelOrder}/$orderId');
-      
+
       // 1. إزالته من القائمة النشطة (Active)
       orders.removeWhere((o) => o.id == orderId);
-      
+
       // 2. تحديث حالته في قائمة السجل (History) محلياً قبل التحديث من السيرفر
       final index = ordersHistory.indexWhere((o) => o.id == orderId);
       if (index != -1) {
@@ -162,28 +216,40 @@ class AppState extends ChangeNotifier {
         newRaw['status'] = 'cancelled';
         ordersHistory[index] = ApiItem.fromJson(newRaw);
       }
-      
+
       notifyListeners();
-      
+
       // 3. مزامنة البيانات النهائية من السيرفر
       await _loadOrdersInternal();
     });
   }
 
   Future<void> _loadOrdersInternal() async {
-    final activePayload = await apiClient.get(ApiEndpoints.getOrders).catchError((_) => []);
-    final historyPayload = await apiClient.get(ApiEndpoints.getUserOrdersHistory).catchError((_) => []);
-    orders..clear()..addAll(parseItems(activePayload));
-    ordersHistory..clear()..addAll(parseItems(historyPayload));
+    final activePayload = await apiClient
+        .get(ApiEndpoints.getOrders)
+        .catchError((_) => []);
+    final historyPayload = await apiClient
+        .get(ApiEndpoints.getUserOrdersHistory)
+        .catchError((_) => []);
+    orders
+      ..clear()
+      ..addAll(parseItems(activePayload));
+    ordersHistory
+      ..clear()
+      ..addAll(parseItems(historyPayload));
   }
 
   Future<void> loadTarget() async {
     await _guard(() async {
-      final payload = await apiClient.get(ApiEndpoints.getTarget).catchError((_) => {'data': {}});
+      final payload = await apiClient
+          .get(ApiEndpoints.getTarget)
+          .catchError((_) => {'data': {}});
       final data = payload['data'];
       if (data != null) {
-        targetAchieved = double.tryParse(data['achieved']?.toString() ?? '0') ?? 0;
-        targetSales = double.tryParse(data['target_sales']?.toString() ?? '0') ?? 0;
+        targetAchieved =
+            double.tryParse(data['achieved']?.toString() ?? '0') ?? 0;
+        targetSales =
+            double.tryParse(data['target_sales']?.toString() ?? '0') ?? 0;
       }
     });
   }
@@ -197,7 +263,9 @@ class AppState extends ChangeNotifier {
 
   Future<void> removeFromFavourites(ApiItem product) async {
     await _guard(() async {
-      await apiClient.delete('${ApiEndpoints.removeFromFavourites}/${product.id}');
+      await apiClient.delete(
+        '${ApiEndpoints.removeFromFavourites}/${product.id}',
+      );
       // إزالة محلية فورية لتحسين سرعة الاستجابة في الـ UI
       favourites.removeWhere((p) => p.id == product.id);
       notifyListeners();
@@ -207,8 +275,12 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> loadFavourites() async {
-    final payload = await apiClient.get(ApiEndpoints.getFavourites).catchError((_) => []);
-    favourites..clear()..addAll(parseItems(payload));
+    final payload = await apiClient
+        .get(ApiEndpoints.getFavourites)
+        .catchError((_) => []);
+    favourites
+      ..clear()
+      ..addAll(parseItems(payload));
     notifyListeners();
   }
 
@@ -218,12 +290,19 @@ class AppState extends ChangeNotifier {
       final payload = await apiClient.get(ApiEndpoints.getCart);
       final data = payload['data'];
       if (data != null) {
-        serverCartTotal = double.tryParse(data['final_price']?.toString() ?? '0') ?? 0;
-        serverCartCount = int.tryParse(data['number_of_products']?.toString() ?? '0') ?? 0;
+        serverCartTotal =
+            double.tryParse(data['final_price']?.toString() ?? '0') ?? 0;
+        serverCartCount =
+            int.tryParse(data['number_of_products']?.toString() ?? '0') ?? 0;
         final List<dynamic> items = data['items'] ?? [];
         cart.clear();
         for (var item in items) {
-          cart.add(CartLine(product: ApiItem.fromJson(item), quantity: int.tryParse(item['quantity']?.toString() ?? '1') ?? 1));
+          cart.add(
+            CartLine(
+              product: ApiItem.fromJson(item),
+              quantity: int.tryParse(item['quantity']?.toString() ?? '1') ?? 1,
+            ),
+          );
         }
         notifyListeners();
       }
@@ -233,17 +312,23 @@ class AppState extends ChangeNotifier {
   }
 
   Future<List<ApiItem>> loadProductsByCategory(ApiItem category) async {
-    final payload = await apiClient.get('${ApiEndpoints.productsByCategory}/${category.id}');
+    final payload = await apiClient.get(
+      '${ApiEndpoints.productsByCategory}/${category.id}',
+    );
     return parseItems(payload);
   }
 
   Future<List<ApiItem>> loadCategoriesByCompany(String companyId) async {
-    final payload = await apiClient.get('${ApiEndpoints.companyCategories}/$companyId/categories');
+    final payload = await apiClient.get(
+      '${ApiEndpoints.companyCategories}/$companyId/categories',
+    );
     return parseItems(payload);
   }
 
   Future<ApiItem> loadProductDetails(String productId) async {
-    final payload = await apiClient.get('${ApiEndpoints.productDetails}/$productId');
+    final payload = await apiClient.get(
+      '${ApiEndpoints.productDetails}/$productId',
+    );
     final data = payload['data'] as Map<String, dynamic>;
     return ApiItem.fromJson(data);
   }
@@ -251,7 +336,10 @@ class AppState extends ChangeNotifier {
   Future<void> addToCart(ApiItem product, {int quantity = 1}) async {
     _optimisticUpdate(product, quantity);
     try {
-      await apiClient.post('${ApiEndpoints.addToCart}/${product.id}', body: {'quantity': quantity});
+      await apiClient.post(
+        '${ApiEndpoints.addToCart}/${product.id}',
+        body: {'quantity': quantity},
+      );
       await syncCart();
     } catch (e) {
       error = e.toString();
@@ -268,11 +356,17 @@ class AppState extends ChangeNotifier {
 
     try {
       if (delta == 1) {
-        await apiClient.post('${ApiEndpoints.addToCart}/${product.id}', body: {'quantity': 1});
+        await apiClient.post(
+          '${ApiEndpoints.addToCart}/${product.id}',
+          body: {'quantity': 1},
+        );
       } else if (delta == -1) {
         await apiClient.delete('${ApiEndpoints.removeFromCart}/${product.id}');
         if (currentQty > 1) {
-          await apiClient.post('${ApiEndpoints.addToCart}/${product.id}', body: {'quantity': currentQty - 1});
+          await apiClient.post(
+            '${ApiEndpoints.addToCart}/${product.id}',
+            body: {'quantity': currentQty - 1},
+          );
         }
       }
       await syncCart();
@@ -287,7 +381,10 @@ class AppState extends ChangeNotifier {
     try {
       await apiClient.delete('${ApiEndpoints.removeFromCart}/${product.id}');
       if (newQty > 0) {
-        await apiClient.post('${ApiEndpoints.addToCart}/${product.id}', body: {'quantity': newQty});
+        await apiClient.post(
+          '${ApiEndpoints.addToCart}/${product.id}',
+          body: {'quantity': newQty},
+        );
       }
       await syncCart();
     } catch (e) {
@@ -352,7 +449,9 @@ class AppState extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> loadOrderDetails(String orderId) async {
-    final payload = await apiClient.get('${ApiEndpoints.getOrderDetails}/$orderId');
+    final payload = await apiClient.get(
+      '${ApiEndpoints.getOrderDetails}/$orderId',
+    );
     return payload['data'] ?? {};
   }
 
@@ -387,12 +486,148 @@ class AppState extends ChangeNotifier {
       cart.clear();
       serverCartTotal = 0;
       serverCartCount = 0;
+      userPoints = 0;
+      pointsSummary = null;
+      pointsGifts.clear();
+      pointsHistory.clear();
       isBootstrapped = false;
     });
   }
 
+  Future<void> loadPointsSummary() async {
+    try {
+      final payload = await apiClient.get(ApiEndpoints.pointsSummary);
+      final data = payload['data'];
+      if (data != null && data is Map<String, dynamic>) {
+        pointsSummary = PointsSummary.fromJson(data);
+        userPoints = pointsSummary!.points;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading points summary: $e');
+    }
+  }
+
+  Future<void> loadPointsGifts() async {
+    try {
+      final payload = await apiClient.get(ApiEndpoints.pointsGifts);
+      if (payload is Map) {
+        final rawList = payload['data'];
+        final List<dynamic> list = rawList is List ? rawList : [];
+        pointsGifts.clear();
+        for (var item in list) {
+          if (item is Map) {
+            final gift = PointsGift.fromJson(Map<String, dynamic>.from(item));
+            pointsGifts.add(gift);
+          }
+        }
+        if (payload['user_points'] != null) {
+          userPoints =
+              int.tryParse(payload['user_points'].toString()) ?? userPoints;
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading points gifts: $e');
+    }
+  }
+
+  Future<void> loadPointsHistory() async {
+    try {
+      final payload = await apiClient.get(ApiEndpoints.pointsHistory);
+      if (payload is Map) {
+        final rawList = payload['data'];
+        final List<dynamic> list = rawList is List ? rawList : [];
+        pointsHistory.clear();
+        for (var item in list) {
+          if (item is Map) {
+            pointsHistory.add(
+              PointsHistoryItem.fromJson(Map<String, dynamic>.from(item)),
+            );
+          }
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading points history: $e');
+    }
+  }
+
+  Future<String?> redeemGift(int giftId) async {
+    String? message;
+    await _guard(() async {
+      final payload = await apiClient.post(
+        '${ApiEndpoints.pointsRedeem}/$giftId',
+      );
+      message = payload['message']?.toString();
+      if (payload['remaining_points'] != null) {
+        userPoints =
+            int.tryParse(payload['remaining_points'].toString()) ?? userPoints;
+      }
+      await loadPointsSummary();
+      await loadPointsGifts();
+    });
+    return message;
+  }
+
+  Future<void> loadNotificationCount() async {
+    try {
+      final payload = await apiClient.get(
+        ApiEndpoints.notificationsUnreadCount,
+      );
+      unreadNotificationsCount =
+          int.tryParse(payload['count']?.toString() ?? '0') ?? 0;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading notification count: $e');
+    }
+  }
+
+  Future<void> loadNotifications() async {
+    try {
+      final payload = await apiClient.get(ApiEndpoints.notifications);
+      final rawItems = payload is Map ? payload['data'] : payload;
+      final items = rawItems is List ? rawItems : const [];
+      notifications
+        ..clear()
+        ..addAll(
+          items.whereType<Map>().map(
+            (item) => AppNotification.fromJson(Map<String, dynamic>.from(item)),
+          ),
+        );
+      unreadNotificationsCount = notifications
+          .where((item) => !item.isRead)
+          .length;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading notifications: $e');
+    }
+  }
+
+  Future<void> markNotificationAsRead(AppNotification notification) async {
+    if (notification.isRead) return;
+    try {
+      await apiClient.post(
+        '${ApiEndpoints.notifications}/${notification.id}/read',
+      );
+      await loadNotifications();
+    } catch (e) {
+      debugPrint('Error marking notification as read: $e');
+    }
+  }
+
+  Future<void> markAllNotificationsAsRead() async {
+    if (unreadNotificationsCount == 0) return;
+    try {
+      await apiClient.post(ApiEndpoints.notificationsReadAll);
+      await loadNotifications();
+    } catch (e) {
+      debugPrint('Error marking notifications as read: $e');
+    }
+  }
+
   Future<void> _guard(Future<void> Function() action) async {
-    if (isLoading) return; 
+    if (isLoading) return;
     isLoading = true;
     error = null;
     notifyListeners();

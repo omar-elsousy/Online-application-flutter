@@ -11,7 +11,7 @@ The Flutter package/project name is `mansour` in `pubspec.yaml`. The user-facing
 The default API base URL is configured in `lib/core/network/api_config.dart`:
 
 ```dart
-http://10.1.104.82:81/Online-application/public/api
+http://10.1.104.82:8000/api
 ```
 
 You can override it at build/run time with:

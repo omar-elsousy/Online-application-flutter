@@ -45,15 +45,24 @@ class ApiItem {
     var imageUrl = _first(json, ['image', 'image_url', 'photo', 'thumbnail'])?.toString();
     final priceValue = _first(json, ['price', 'sell_price', 'unit_price', 'amount', 'final_price', 'total_price']);
 
-    if (imageUrl != null && imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
-      final base = ApiConfig.baseImageUrl;
-      final separator = imageUrl.startsWith('/') ? '' : '/';
-      imageUrl = '$base$separator$imageUrl';
-    }
-
-    // تأكيد أن الحقل الفارغ أو null يتم التعامل معه بشكل صحيح
     if (imageUrl != null && (imageUrl.isEmpty || imageUrl == 'null')) {
       imageUrl = null;
+    }
+
+    if (imageUrl != null) {
+      if (imageUrl.startsWith('//')) {
+        imageUrl = 'http:$imageUrl';
+      }
+      if (imageUrl.contains('localhost') || imageUrl.contains('127.0.0.1')) {
+        imageUrl = imageUrl.replaceFirst(
+          RegExp(r'https?://(localhost|127\.0\.0\.1)(:\d+)?'),
+          ApiConfig.baseImageUrl,
+        );
+      } else if (!imageUrl.startsWith('http')) {
+        final base = ApiConfig.baseImageUrl;
+        final separator = imageUrl.startsWith('/') ? '' : '/';
+        imageUrl = '$base$separator$imageUrl';
+      }
     }
 
     return ApiItem(

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "27701869892",
+    "project_id": "online-app-22939",
+    "storage_bucket": "online-app-22939.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:27701869892:android:0ee1272eea94086f9d6b11",
+        "android_client_info": {
+          "package_name": "com.mansour.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCZQvzIc7IW2zqiZBVFwz5jf73G6g8uKY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

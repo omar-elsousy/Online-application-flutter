@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../controllers/app_scope.dart';
-import '../controllers/app_state.dart';
 import '../models/api_item.dart';
 
 class OrderDetailsScreen extends StatefulWidget {
@@ -110,7 +109,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                     ...(_details!['items'] as List? ?? []).map((item) {
                       String? imageUrl = item['image']?.toString();
                       if (imageUrl != null && imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
-                        imageUrl = 'http://10.1.104.82:81/Online-application/public/$imageUrl';
+                        imageUrl = 'http://10.1.104.82:8000/$imageUrl';
                       }
                       return Card(
                         margin: const EdgeInsets.only(bottom: 10),

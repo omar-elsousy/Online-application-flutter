@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'controllers/app_scope.dart';
 import 'controllers/app_state.dart';
+import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.instance.init();
   runApp(MansourApp(state: AppState()));
 }
 
@@ -22,6 +25,7 @@ class MansourApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Mansour',
         debugShowCheckedModeBanner: false,
+        scaffoldMessengerKey: NotificationService.instance.messengerKey,
         theme: AppTheme.light(),
         home: const _AuthGate(),
       ),

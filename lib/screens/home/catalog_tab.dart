@@ -7,6 +7,7 @@ import '../category_products_screen.dart';
 import '../company_categories_screen.dart';
 import '../latest_offers_screen.dart';
 import '../product_details_screen.dart';
+import '../points_screen.dart';
 import '../../widgets/product_card.dart';
 
 class CatalogTab extends StatefulWidget {
@@ -49,14 +50,26 @@ class _CatalogTabState extends State<CatalogTab> {
             const SizedBox(height: 14),
           ],
           
+          // كارت My Points
+          if (query.isEmpty) ...[
+            _MyPointsCard(
+              points: state.userPoints,
+              nextResetDate: state.pointsSummary?.nextResetDate,
+              onTap: () => Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute(builder: (_) => const PointsScreen()),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          
           // إخفاء الـ Carousel عند البحث لترك مساحة لنتائج البحث
           if (query.isEmpty) ...[
-            _SectionHeader(title: 'Sections', action: '${state.sections.length} found'),
+            _SectionHeader(
+              title: 'Sections',
+              action: '${state.sections.isNotEmpty ? state.sections.length : 3} found',
+            ),
             const SizedBox(height: 10),
-            if (state.sections.isEmpty)
-              const _EmptyState(message: 'No sections returned yet.')
-            else
-              _SectionsCarousel(sections: state.sections),
+            _SectionsCarousel(sections: state.sections),
             const SizedBox(height: 22),
           ],
           
@@ -188,6 +201,29 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
   Timer? _timer;
   int _current = 0;
 
+  static final List<ApiItem> _defaultPlaceholders = [
+    ApiItem(
+      id: 'placeholder_1',
+      title: 'عروض حصرية',
+      subtitle: 'اكتشف أفضل الخصومات والعروض الترويجية اليوم',
+      raw: {'is_placeholder': true, 'action_type': 'none'},
+    ),
+    ApiItem(
+      id: 'placeholder_2',
+      title: 'أحدث المنتجات',
+      subtitle: 'تصفح تشكيلة واسعة من أحدث البضائع المتاحة',
+      raw: {'is_placeholder': true, 'action_type': 'none'},
+    ),
+    ApiItem(
+      id: 'placeholder_3',
+      title: 'مجموعة منصور',
+      subtitle: 'جودة وثقة وسرعة في التوصيل لجميع الطلبات',
+      raw: {'is_placeholder': true, 'action_type': 'none'},
+    ),
+  ];
+
+  List<ApiItem> get _items => widget.sections.isNotEmpty ? widget.sections : _defaultPlaceholders;
+
   @override
   void initState() {
     super.initState();
@@ -205,11 +241,15 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
 
   void _startAutoPlay() {
     _timer?.cancel();
-    if (widget.sections.length <= 1) return;
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (!mounted) return;
-      final next = (_current + 1) % widget.sections.length;
-      _controller.animateToPage(next, duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+    if (_items.length <= 1) return;
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || !_controller.hasClients) return;
+      final next = (_current + 1) % _items.length;
+      _controller.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOut,
+      );
     });
   }
 
@@ -227,6 +267,111 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
     }
   }
 
+  Widget _buildPlaceholderCard(BuildContext context, ApiItem section, int index) {
+    final List<List<Color>> gradients = [
+      [const Color(0xFF2F6F73), const Color(0xFF1B494D)],
+      [const Color(0xFFE9A23B), const Color(0xFFB8761E)],
+      [const Color(0xFF386B8C), const Color(0xFF1E4358)],
+    ];
+    final List<IconData> icons = [
+      Icons.local_offer_rounded,
+      Icons.auto_awesome_rounded,
+      Icons.verified_rounded,
+    ];
+
+    final gradient = gradients[index % gradients.length];
+    final icon = icons[index % icons.length];
+
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: gradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: gradient.first.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, color: Colors.white, size: 14),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'Mansour',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  section.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (section.subtitle != null && section.subtitle!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    section.subtitle!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.85),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.18),
+            ),
+            child: Icon(icon, color: Colors.white, size: 30),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -236,6 +381,8 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final items = _items;
+
     return Column(
       children: [
         SizedBox(
@@ -243,17 +390,13 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
           child: PageView.builder(
             controller: _controller,
             onPageChanged: (value) => setState(() => _current = value),
-            itemCount: widget.sections.length,
+            itemCount: items.length,
             itemBuilder: (_, index) {
-              final section = widget.sections[index];
+              final section = items[index];
               
               final String? actionType = section.raw['action_type']?.toString();
               final String? actionId = section.raw['action_id']?.toString();
-              
-              // استخدام الحقل الجديد action_name من الـ API الخاص بك
               final String actionName = section.raw['action_name']?.toString() ?? section.title;
-
-              // التحقق من صلاحية الأكشن (يجب ألا يكون none وألا يكون الـ id فارغاً)
               final bool isClickable = actionType != null && actionType != 'none' && actionId != null;
 
               return Material(
@@ -265,18 +408,27 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
                   borderRadius: BorderRadius.circular(20),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(20),
-                    child: section.imageUrl == null
-                        ? Container(
-                            color: Theme.of(context).colorScheme.primaryContainer,
-                            child: const Center(child: Icon(Icons.image_outlined, size: 36)),
-                          )
+                    child: (section.imageUrl == null || section.imageUrl!.isEmpty)
+                        ? _buildPlaceholderCard(context, section, index)
                         : Image.network(
                             section.imageUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              color: Theme.of(context).colorScheme.primaryContainer,
-                              child: const Center(child: Icon(Icons.broken_image_outlined, size: 36)),
-                            ),
+                            width: double.infinity,
+                            height: double.infinity,
+                            errorBuilder: (_, __, ___) => _buildPlaceholderCard(context, section, index),
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                   ),
                 ),
@@ -288,7 +440,7 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
-            widget.sections.length,
+            items.length,
             (index) => GestureDetector(
               onTap: () => _controller.animateToPage(index, duration: const Duration(milliseconds: 300), curve: Curves.easeOut),
               child: AnimatedContainer(
@@ -343,3 +495,105 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
+
+class _MyPointsCard extends StatelessWidget {
+  const _MyPointsCard({
+    required this.points,
+    this.nextResetDate,
+    required this.onTap,
+  });
+
+  final int points;
+  final String? nextResetDate;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                primaryColor,
+                Colors.amber.shade800,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: primaryColor.withOpacity(0.25),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.stars_rounded, color: Colors.amberAccent, size: 30),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'My Points (نقاطي)',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      nextResetDate != null && nextResetDate!.isNotEmpty
+                          ? 'استبدل نقاطك قبل التصفير: $nextResetDate'
+                          : 'اضغط لعرض المكافآت وسياسة التصفير',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.85),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$points نقطة',
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Icon(Icons.chevron_right, color: Colors.white, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

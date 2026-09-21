@@ -5,6 +5,8 @@ import '../privacy_policy_screen.dart';
 import '../contact_us_screen.dart';
 import 'target_tab.dart';
 import 'orders_tab.dart';
+import '../points_screen.dart';
+import '../notifications_screen.dart';
 
 class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key});
@@ -23,11 +25,25 @@ class ProfileTab extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _ProfileTile(
+          icon: Icons.stars_rounded,
+          title: 'My Points (نقاطي)',
+          color: Colors.amber.shade800,
+          onTap: () => Navigator.of(
+            context,
+            rootNavigator: true,
+          ).push(MaterialPageRoute(builder: (_) => const PointsScreen())),
+        ),
+        _ProfileTile(
           icon: Icons.track_changes,
           title: 'My Target',
           color: Colors.orange,
           onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('My Target')), body: const TargetTab())),
+            MaterialPageRoute(
+              builder: (_) => Scaffold(
+                appBar: AppBar(title: const Text('My Target')),
+                body: const TargetTab(),
+              ),
+            ),
           ),
         ),
         _ProfileTile(
@@ -35,7 +51,25 @@ class ProfileTab extends StatelessWidget {
           title: 'My Orders',
           color: Colors.green,
           onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => Scaffold(appBar: AppBar(title: const Text('My Orders')), body: const OrdersTab())),
+            MaterialPageRoute(
+              builder: (_) => Scaffold(
+                appBar: AppBar(title: const Text('My Orders')),
+                body: const OrdersTab(),
+              ),
+            ),
+          ),
+        ),
+        _ProfileTile(
+          icon: Icons.notifications_outlined,
+          title: 'الإشعارات',
+          color: Colors.teal,
+          trailing: Badge.count(
+            count: state.unreadNotificationsCount,
+            isLabelVisible: state.unreadNotificationsCount > 0,
+            child: const Icon(Icons.chevron_right, size: 20),
+          ),
+          onTap: () => Navigator.of(context, rootNavigator: true).push(
+            MaterialPageRoute(builder: (_) => const NotificationsScreen()),
           ),
         ),
         _ProfileTile(
@@ -48,9 +82,9 @@ class ProfileTab extends StatelessWidget {
           icon: Icons.favorite,
           title: 'My Favourites',
           color: Colors.red,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const FavouritesScreen()),
-          ),
+          onTap: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const FavouritesScreen())),
         ),
         const Divider(height: 32),
         _ProfileTile(
@@ -65,9 +99,9 @@ class ProfileTab extends StatelessWidget {
           icon: Icons.contact_support_outlined,
           title: 'Contact Us',
           color: Colors.teal,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const ContactUsScreen()),
-          ),
+          onTap: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const ContactUsScreen())),
         ),
         const SizedBox(height: 24),
         ElevatedButton.icon(
@@ -100,29 +134,40 @@ class ProfileTab extends StatelessWidget {
                   TextFormField(
                     controller: currentPasswordController,
                     obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Current Password'),
+                    decoration: const InputDecoration(
+                      labelText: 'Current Password',
+                    ),
                     validator: (v) => v!.isEmpty ? 'Required' : null,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: newPasswordController,
                     obscureText: true,
-                    decoration: const InputDecoration(labelText: 'New Password'),
+                    decoration: const InputDecoration(
+                      labelText: 'New Password',
+                    ),
                     validator: (v) => v!.length < 8 ? 'Min 8 characters' : null,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: confirmPasswordController,
                     obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Confirm New Password'),
-                    validator: (v) => v != newPasswordController.text ? 'Passwords do not match' : null,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirm New Password',
+                    ),
+                    validator: (v) => v != newPasswordController.text
+                        ? 'Passwords do not match'
+                        : null,
                   ),
                 ],
               ),
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('CANCEL'),
+            ),
             ElevatedButton(
               onPressed: () async {
                 if (formKey.currentState!.validate()) {
@@ -133,7 +178,9 @@ class ProfileTab extends StatelessWidget {
                   );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(state.error ?? 'Password updated')),
+                      SnackBar(
+                        content: Text(state.error ?? 'Password updated'),
+                      ),
                     );
                     if (state.error == null || !state.error!.contains('غلط')) {
                       Navigator.pop(context);
@@ -155,12 +202,14 @@ class _ProfileTile extends StatelessWidget {
   final String title;
   final Color color;
   final VoidCallback onTap;
+  final Widget? trailing;
 
   const _ProfileTile({
     required this.icon,
     required this.title,
     required this.color,
     required this.onTap,
+    this.trailing,
   });
 
   @override
@@ -170,7 +219,7 @@ class _ProfileTile extends StatelessWidget {
       child: ListTile(
         leading: Icon(icon, color: color),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        trailing: const Icon(Icons.chevron_right, size: 20),
+        trailing: trailing ?? const Icon(Icons.chevron_right, size: 20),
         onTap: onTap,
       ),
     );

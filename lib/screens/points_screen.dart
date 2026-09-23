@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../controllers/app_scope.dart';
 import '../models/point_models.dart';
 import '../widgets/app_error_banner.dart';
+import '../widgets/app_search_field.dart';
+import '../utils/search_utils.dart';
 
 class PointsScreen extends StatefulWidget {
   const PointsScreen({super.key});
@@ -13,6 +15,7 @@ class PointsScreen extends StatefulWidget {
 
 class _PointsScreenState extends State<PointsScreen> {
   bool _isRefreshing = false;
+  String _query = '';
 
   @override
   void initState() {
@@ -46,6 +49,27 @@ class _PointsScreenState extends State<PointsScreen> {
     final state = AppScope.of(context);
     final summary = state.pointsSummary;
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final gifts = state.pointsGifts
+        .where(
+          (gift) => matchesSearchQuery(_query, [
+            gift.id,
+            gift.title,
+            gift.description,
+            gift.pointsRequired,
+          ]),
+        )
+        .toList();
+    final history = state.pointsHistory
+        .where(
+          (item) => matchesSearchQuery(_query, [
+            item.id,
+            item.type,
+            item.description,
+            item.createdAt,
+            item.points,
+          ]),
+        )
+        .toList();
 
     return DefaultTabController(
       length: 3,
@@ -138,18 +162,26 @@ class _PointsScreenState extends State<PointsScreen> {
                     const SizedBox(height: 14),
                     // تنبيه موعد التصفير
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.timer_outlined, color: Colors.amberAccent, size: 18),
+                          const Icon(
+                            Icons.timer_outlined,
+                            color: Colors.amberAccent,
+                            size: 18,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              summary != null && summary.nextResetDate.isNotEmpty
+                              summary != null &&
+                                      summary.nextResetDate.isNotEmpty
                                   ? 'تنتهي النقاط كل ${summary.resetMonths} أشهر (التصفير القادم: ${summary.nextResetDate})'
                                   : 'تصفير دوري للنقاط كل 6 أشهر',
                               style: const TextStyle(
@@ -167,6 +199,15 @@ class _PointsScreenState extends State<PointsScreen> {
               ),
             ),
 
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: AppSearchField(
+                value: _query,
+                onChanged: (value) => setState(() => _query = value),
+                hintText: 'ابحث في الهدايا وسجل النقاط',
+              ),
+            ),
+
             // تبويبات التنقل
             TabBar(
               labelColor: primaryColor,
@@ -174,18 +215,12 @@ class _PointsScreenState extends State<PointsScreen> {
               indicatorColor: primaryColor,
               indicatorWeight: 3,
               tabs: const [
-                Tab(
-                  icon: Icon(Icons.card_giftcard),
-                  text: 'الهدايا المتاحة',
-                ),
+                Tab(icon: Icon(Icons.card_giftcard), text: 'الهدايا المتاحة'),
                 Tab(
                   icon: Icon(Icons.receipt_long_outlined),
                   text: 'سجل النقاط',
                 ),
-                Tab(
-                  icon: Icon(Icons.info_outline),
-                  text: 'شروط الكسب',
-                ),
+                Tab(icon: Icon(Icons.info_outline), text: 'شروط الكسب'),
               ],
             ),
 
@@ -194,21 +229,18 @@ class _PointsScreenState extends State<PointsScreen> {
               child: TabBarView(
                 children: [
                   _GiftsTab(
-                    gifts: state.pointsGifts,
+                    gifts: gifts,
                     userPoints: state.userPoints,
                     isLoading: _isRefreshing || state.isLoading,
                     onRefresh: _refresh,
                     onRedeem: (gift) => _showRedeemDialog(context, gift),
                   ),
                   _HistoryTab(
-                    history: state.pointsHistory,
+                    history: history,
                     isLoading: _isRefreshing || state.isLoading,
                     onRefresh: _refresh,
                   ),
-                  _RulesTab(
-                    summary: summary,
-                    onRefresh: _refresh,
-                  ),
+                  _RulesTab(summary: summary, onRefresh: _refresh),
                 ],
               ),
             ),
@@ -255,9 +287,7 @@ class _PointsScreenState extends State<PointsScreen> {
             child: const Text('إلغاء'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(120, 40),
-            ),
+            style: ElevatedButton.styleFrom(minimumSize: const Size(120, 40)),
             onPressed: () async {
               Navigator.of(ctx).pop();
               final messenger = ScaffoldMessenger.of(context);
@@ -308,7 +338,11 @@ class _GiftsTab extends StatelessWidget {
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.card_giftcard, size: 64, color: Colors.grey),
+                        const Icon(
+                          Icons.card_giftcard,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
                         const SizedBox(height: 12),
                         const Text(
                           'لا توجد هدايا متاحة حالياً.',
@@ -343,11 +377,16 @@ class _GiftsTab extends StatelessWidget {
           final progress = gift.pointsRequired > 0
               ? (userPoints / gift.pointsRequired).clamp(0.0, 1.0)
               : 0.0;
-          final remaining = (gift.pointsRequired - userPoints).clamp(0, gift.pointsRequired);
+          final remaining = (gift.pointsRequired - userPoints).clamp(
+            0,
+            gift.pointsRequired,
+          );
 
           return Card(
             margin: const EdgeInsets.only(bottom: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             elevation: 2,
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -364,29 +403,44 @@ class _GiftsTab extends StatelessWidget {
                           color: Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: gift.imageUrl != null && gift.imageUrl!.isNotEmpty
+                        child:
+                            gift.imageUrl != null && gift.imageUrl!.isNotEmpty
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
                                 child: Image.network(
                                   gift.imageUrl!,
                                   fit: BoxFit.cover,
-                                  loadingBuilder: (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return const Center(
-                                      child: SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
-                                      ),
-                                    );
-                                  },
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                        if (loadingProgress == null)
+                                          return child;
+                                        return const Center(
+                                          child: SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        );
+                                      },
                                   errorBuilder: (context, error, stackTrace) {
-                                    debugPrint('Error loading gift image (${gift.imageUrl}): $error');
-                                    return const Icon(Icons.card_giftcard, size: 36, color: Colors.amber);
+                                    debugPrint(
+                                      'Error loading gift image (${gift.imageUrl}): $error',
+                                    );
+                                    return const Icon(
+                                      Icons.card_giftcard,
+                                      size: 36,
+                                      color: Colors.amber,
+                                    );
                                   },
                                 ),
                               )
-                            : const Icon(Icons.card_giftcard, size: 36, color: Colors.amber),
+                            : const Icon(
+                                Icons.card_giftcard,
+                                size: 36,
+                                color: Colors.amber,
+                              ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -395,24 +449,36 @@ class _GiftsTab extends StatelessWidget {
                           children: [
                             Text(
                               gift.title,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
-                            if (gift.description != null && gift.description!.isNotEmpty) ...[
+                            if (gift.description != null &&
+                                gift.description!.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Text(
                                 gift.description!,
-                                style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ],
                             const SizedBox(height: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.amber.shade50,
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.amber.shade300),
+                                border: Border.all(
+                                  color: Colors.amber.shade300,
+                                ),
                               ),
                               child: Text(
                                 '${gift.pointsRequired} نقطة',
@@ -436,7 +502,9 @@ class _GiftsTab extends StatelessWidget {
                       minHeight: 8,
                       backgroundColor: Colors.grey.shade200,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        canRedeem ? Colors.green : Theme.of(context).colorScheme.primary,
+                        canRedeem
+                            ? Colors.green
+                            : Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ),
@@ -450,7 +518,9 @@ class _GiftsTab extends StatelessWidget {
                               ? '✅ نقاطك كافية للاستبدال!'
                               : 'متبقي $remaining نقطة للاستبدال',
                           style: TextStyle(
-                            color: canRedeem ? Colors.green : Colors.grey.shade700,
+                            color: canRedeem
+                                ? Colors.green
+                                : Colors.grey.shade700,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -458,13 +528,22 @@ class _GiftsTab extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: canRedeem && !isLoading ? () => onRedeem(gift) : null,
+                        onPressed: canRedeem && !isLoading
+                            ? () => onRedeem(gift)
+                            : null,
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(110, 36),
-                          backgroundColor: canRedeem ? Colors.green : Colors.grey.shade300,
+                          backgroundColor: canRedeem
+                              ? Colors.green
+                              : Colors.grey.shade300,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                         ),
                         child: const Text('استبدال الآن'),
                       ),
@@ -542,11 +621,18 @@ class _HistoryTab extends StatelessWidget {
           final isPositive = item.points > 0;
 
           return ListTile(
-            contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 6,
+              horizontal: 8,
+            ),
             leading: CircleAvatar(
-              backgroundColor: isPositive ? Colors.green.shade50 : Colors.red.shade50,
+              backgroundColor: isPositive
+                  ? Colors.green.shade50
+                  : Colors.red.shade50,
               child: Icon(
-                isPositive ? Icons.add_circle_outline : Icons.remove_circle_outline,
+                isPositive
+                    ? Icons.add_circle_outline
+                    : Icons.remove_circle_outline,
                 color: isPositive ? Colors.green : Colors.red,
               ),
             ),
@@ -575,10 +661,7 @@ class _HistoryTab extends StatelessWidget {
 
 // 3. تبويب شروط وسياسة الكسب
 class _RulesTab extends StatelessWidget {
-  const _RulesTab({
-    required this.summary,
-    required this.onRefresh,
-  });
+  const _RulesTab({required this.summary, required this.onRefresh});
 
   final PointsSummary? summary;
   final Future<void> Function() onRefresh;
@@ -595,7 +678,9 @@ class _RulesTab extends StatelessWidget {
         children: [
           // كارت السياسة
           Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
             color: Colors.blue.shade50,
             elevation: 0,
             child: Padding(
@@ -622,7 +707,11 @@ class _RulesTab extends StatelessWidget {
                     summary?.policyText.isNotEmpty == true
                         ? summary!.policyText
                         : 'يتم تصفير النقاط دورياً كل 6 أشهر من بدء الدورة. ننصحك باستبدال نقاطك بالهدايا قبل تاريخ التصفير.',
-                    style: TextStyle(color: Colors.blue.shade900, fontSize: 13, height: 1.4),
+                    style: TextStyle(
+                      color: Colors.blue.shade900,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
                   ),
                   if (summary?.nextResetDate.isNotEmpty == true) ...[
                     const SizedBox(height: 8),
@@ -662,12 +751,18 @@ class _RulesTab extends StatelessWidget {
               final isQty = rule.ruleType == 'quantity';
               return Card(
                 margin: const EdgeInsets.only(bottom: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: isQty ? Colors.orange.shade50 : Colors.teal.shade50,
+                    backgroundColor: isQty
+                        ? Colors.orange.shade50
+                        : Colors.teal.shade50,
                     child: Icon(
-                      isQty ? Icons.inventory_2_outlined : Icons.monetization_on_outlined,
+                      isQty
+                          ? Icons.inventory_2_outlined
+                          : Icons.monetization_on_outlined,
                       color: isQty ? Colors.orange : Colors.teal,
                     ),
                   ),
@@ -680,7 +775,10 @@ class _RulesTab extends StatelessWidget {
                     style: const TextStyle(fontSize: 12),
                   ),
                   trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.amber.shade100,
                       borderRadius: BorderRadius.circular(8),

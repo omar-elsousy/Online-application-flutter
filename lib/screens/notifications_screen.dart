@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../controllers/app_scope.dart';
 import '../models/app_notification.dart';
+import '../utils/search_utils.dart';
+import '../widgets/app_search_field.dart';
 import 'notification_details_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -12,6 +14,8 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
+  String _query = '';
+
   @override
   void initState() {
     super.initState();
@@ -23,7 +27,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
-    final notifications = state.notifications;
+    final notifications = state.notifications
+        .where(
+          (notification) => matchesSearchQuery(_query, [
+            notification.id,
+            notification.title,
+            notification.body,
+            notification.createdAt,
+          ]),
+        )
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -36,41 +49,61 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: notifications.isEmpty
-            ? ListView(
-                children: const [
-                  SizedBox(height: 180),
-                  Icon(
-                    Icons.notifications_none,
-                    size: 56,
-                    color: Colors.black38,
-                  ),
-                  SizedBox(height: 16),
-                  Center(child: Text('لا توجد إشعارات حتى الآن')),
-                ],
-              )
-            : ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: notifications.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) => _NotificationTile(
-                  notification: notifications[index],
-                  onTap: () async {
-                    final notification = notifications[index];
-                    await state.markNotificationAsRead(notification);
-                    if (!context.mounted) return;
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => NotificationDetailsScreen(
-                          notification: notification,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+            child: AppSearchField(
+              value: _query,
+              onChanged: (value) => setState(() => _query = value),
+              hintText: 'ابحث في الإشعارات',
+            ),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: notifications.isEmpty
+                  ? ListView(
+                      children: [
+                        const SizedBox(height: 180),
+                        const Icon(
+                          Icons.notifications_none,
+                          size: 56,
+                          color: Colors.black38,
                         ),
+                        const SizedBox(height: 16),
+                        Center(
+                          child: Text(
+                            _query.isEmpty
+                                ? 'لا توجد إشعارات حتى الآن'
+                                : 'لا توجد إشعارات مطابقة للبحث',
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: notifications.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) => _NotificationTile(
+                        notification: notifications[index],
+                        onTap: () async {
+                          final notification = notifications[index];
+                          await state.markNotificationAsRead(notification);
+                          if (!context.mounted) return;
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => NotificationDetailsScreen(
+                                notification: notification,
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
-              ),
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -30,6 +30,8 @@ class AppState extends ChangeNotifier {
 
   bool isLoading = false;
   bool isBootstrapped = false;
+  bool isHomeLoading = false;
+  bool hasLoadedHome = false;
   bool _isFetching = false;
   String? error;
   String? userMobile;
@@ -74,6 +76,7 @@ class AppState extends ChangeNotifier {
       apiClient.setToken(token);
       userMobile = mobile;
       isBootstrapped = false;
+      hasLoadedHome = false;
     });
 
     if (isAuthenticated) {
@@ -102,85 +105,103 @@ class AppState extends ChangeNotifier {
   Future<void> loadHome() async {
     if (_isFetching) return;
     _isFetching = true;
+    isHomeLoading = true;
+    notifyListeners();
 
-    await _guard(() async {
-      final results = await Future.wait([
-        apiClient.get(ApiEndpoints.sections).catchError((_) => []),
-        apiClient.get(ApiEndpoints.categories).catchError((_) => []),
-        apiClient.get(ApiEndpoints.getCart).catchError((_) => {'data': {}}),
-        apiClient.get(ApiEndpoints.getOrders).catchError((_) => []),
-        apiClient.get(ApiEndpoints.getUserOrdersHistory).catchError((_) => []),
-        apiClient.get(ApiEndpoints.getTarget).catchError((_) => {'data': {}}),
-        apiClient.get(ApiEndpoints.getFavourites).catchError((_) => []),
-        apiClient.get(ApiEndpoints.getLatestOffers).catchError((_) => []),
-        apiClient.get(ApiEndpoints.companies).catchError((_) => []),
-        apiClient
-            .get(ApiEndpoints.pointsSummary)
-            .catchError((_) => {'data': {}}),
-      ]);
+    try {
+      await _guard(() async {
+        final results = await Future.wait([
+          apiClient.get(ApiEndpoints.sections).catchError((_) => []),
+          apiClient.get(ApiEndpoints.categories).catchError((_) => []),
+          apiClient.get(ApiEndpoints.getCart).catchError((_) => {'data': {}}),
+          apiClient.get(ApiEndpoints.getOrders).catchError((_) => []),
+          apiClient
+              .get(ApiEndpoints.getUserOrdersHistory)
+              .catchError((_) => []),
+          apiClient.get(ApiEndpoints.getTarget).catchError((_) => {'data': {}}),
+          apiClient.get(ApiEndpoints.getFavourites).catchError((_) => []),
+          apiClient.get(ApiEndpoints.getLatestOffers).catchError((_) => []),
+          apiClient.get(ApiEndpoints.companies).catchError((_) => []),
+          apiClient
+              .get(ApiEndpoints.pointsSummary)
+              .catchError((_) => {'data': {}}),
+        ]);
 
-      sections
-        ..clear()
-        ..addAll(parseItems(results[0]));
-      categories
-        ..clear()
-        ..addAll(parseItems(results[1]));
+        sections
+          ..clear()
+          ..addAll(parseItems(results[0]));
+        categories
+          ..clear()
+          ..addAll(parseItems(results[1]));
 
-      final cartData = results[2]['data'];
-      if (cartData != null) {
-        serverCartTotal =
-            double.tryParse(cartData['final_price']?.toString() ?? '0') ?? 0;
-        serverCartCount =
-            int.tryParse(cartData['number_of_products']?.toString() ?? '0') ??
-            0;
-        final List<dynamic> items = cartData['items'] ?? [];
-        cart.clear();
-        for (var item in items) {
-          cart.add(
-            CartLine(
-              product: ApiItem.fromJson(item),
-              quantity: int.tryParse(item['quantity']?.toString() ?? '1') ?? 1,
-            ),
-          );
+        final cartData = results[2]['data'];
+        if (cartData != null) {
+          serverCartTotal =
+              double.tryParse(cartData['final_price']?.toString() ?? '0') ?? 0;
+          serverCartCount =
+              int.tryParse(cartData['number_of_products']?.toString() ?? '0') ??
+              0;
+          final List<dynamic> items = cartData['items'] ?? [];
+          cart.clear();
+          for (var item in items) {
+            final product = ApiItem.fromJson(item);
+            if (!product.hasValidPrice) continue;
+            cart.add(
+              CartLine(
+                product: product,
+                quantity:
+                    int.tryParse(item['quantity']?.toString() ?? '1') ?? 1,
+              ),
+            );
+          }
+          serverCartCount = cart.length;
         }
-      }
 
-      orders
-        ..clear()
-        ..addAll(parseItems(results[3]));
-      ordersHistory
-        ..clear()
-        ..addAll(parseItems(results[4]));
+        orders
+          ..clear()
+          ..addAll(parseItems(results[3]));
+        ordersHistory
+          ..clear()
+          ..addAll(parseItems(results[4]));
 
-      final targetData = results[5]['data'];
-      if (targetData != null) {
-        targetAchieved =
-            double.tryParse(targetData['achieved']?.toString() ?? '0') ?? 0;
-        targetSales =
-            double.tryParse(targetData['target_sales']?.toString() ?? '0') ?? 0;
-      }
+        final targetData = results[5]['data'];
+        if (targetData != null) {
+          targetAchieved =
+              double.tryParse(targetData['achieved']?.toString() ?? '0') ?? 0;
+          targetSales =
+              double.tryParse(targetData['target_sales']?.toString() ?? '0') ??
+              0;
+        }
 
-      favourites
-        ..clear()
-        ..addAll(parseItems(results[6]));
-      latestOffers
-        ..clear()
-        ..addAll(parseItems(results[7]));
-      companies
-        ..clear()
-        ..addAll(parseItems(results[8]));
+        favourites
+          ..clear()
+          ..addAll(
+            parseItems(results[6]).where((product) => product.hasValidPrice),
+          );
+        latestOffers
+          ..clear()
+          ..addAll(
+            parseItems(results[7]).where((product) => product.hasValidPrice),
+          );
+        companies
+          ..clear()
+          ..addAll(parseItems(results[8]));
 
-      final pointsData = results[9] is Map ? results[9]['data'] : null;
-      if (pointsData != null && pointsData is Map<String, dynamic>) {
-        pointsSummary = PointsSummary.fromJson(pointsData);
-        userPoints = pointsSummary!.points;
-      }
+        final pointsData = results[9] is Map ? results[9]['data'] : null;
+        if (pointsData != null && pointsData is Map<String, dynamic>) {
+          pointsSummary = PointsSummary.fromJson(pointsData);
+          userPoints = pointsSummary!.points;
+        }
 
-      // تحميل الهدايا بشكل مستقل بعد التحميل الأساسي
-      loadPointsGifts();
-    });
-
-    _isFetching = false;
+        // تحميل الهدايا بشكل مستقل بعد التحميل الأساسي
+        loadPointsGifts();
+      });
+      hasLoadedHome = true;
+    } finally {
+      _isFetching = false;
+      isHomeLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> loadOrders() async {
@@ -280,7 +301,7 @@ class AppState extends ChangeNotifier {
         .catchError((_) => []);
     favourites
       ..clear()
-      ..addAll(parseItems(payload));
+      ..addAll(parseItems(payload).where((product) => product.hasValidPrice));
     notifyListeners();
   }
 
@@ -297,13 +318,16 @@ class AppState extends ChangeNotifier {
         final List<dynamic> items = data['items'] ?? [];
         cart.clear();
         for (var item in items) {
+          final product = ApiItem.fromJson(item);
+          if (!product.hasValidPrice) continue;
           cart.add(
             CartLine(
-              product: ApiItem.fromJson(item),
+              product: product,
               quantity: int.tryParse(item['quantity']?.toString() ?? '1') ?? 1,
             ),
           );
         }
+        serverCartCount = cart.length;
         notifyListeners();
       }
     } catch (e) {
@@ -315,7 +339,9 @@ class AppState extends ChangeNotifier {
     final payload = await apiClient.get(
       '${ApiEndpoints.productsByCategory}/${category.id}',
     );
-    return parseItems(payload);
+    return parseItems(
+      payload,
+    ).where((product) => product.hasValidPrice).toList();
   }
 
   Future<List<ApiItem>> loadCategoriesByCompany(String companyId) async {
@@ -334,6 +360,11 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> addToCart(ApiItem product, {int quantity = 1}) async {
+    final previousCart = List<CartLine>.from(cart);
+    final previousCount = serverCartCount;
+    final previousTotal = serverCartTotal;
+
+    error = null;
     _optimisticUpdate(product, quantity);
     try {
       await apiClient.post(
@@ -342,8 +373,13 @@ class AppState extends ChangeNotifier {
       );
       await syncCart();
     } catch (e) {
+      cart
+        ..clear()
+        ..addAll(previousCart);
+      serverCartCount = previousCount;
+      serverCartTotal = previousTotal;
       error = e.toString();
-      await syncCart();
+      notifyListeners();
     }
   }
 
@@ -394,16 +430,22 @@ class AppState extends ChangeNotifier {
   }
 
   void _optimisticUpdate(ApiItem product, int delta) {
-    final index = cart.indexWhere((l) => l.product.id == product.id);
-    if (index != -1) {
+    final index = cart.indexWhere((line) => line.product.id == product.id);
+    if (index == -1) {
+      if (delta > 0) {
+        cart.add(CartLine(product: product, quantity: delta));
+        serverCartCount++;
+      }
+    } else {
       final newQty = cart[index].quantity + delta;
       if (newQty <= 0) {
         cart.removeAt(index);
+        serverCartCount = (serverCartCount - 1).clamp(0, serverCartCount);
       } else {
         cart[index] = cart[index].copyWith(quantity: newQty);
       }
-      notifyListeners();
     }
+    notifyListeners();
   }
 
   void _optimisticSet(ApiItem product, int newQty) {
@@ -491,6 +533,7 @@ class AppState extends ChangeNotifier {
       pointsGifts.clear();
       pointsHistory.clear();
       isBootstrapped = false;
+      hasLoadedHome = false;
     });
   }
 

@@ -19,9 +19,23 @@ class ApiItem {
   final double? price;
   final Map<String, dynamic> raw;
 
+  bool get hasValidPrice => (price ?? 0) > 0;
+
   factory ApiItem.fromJson(Map<String, dynamic> json) {
-    final id = _first(json, ['action_id', 'company_id', 'product_id', 'id', 'order_id', 'family_id', 'code', 'item_id']) ?? '';
-    final titleValue = _first(json, [
+    final id =
+        _first(json, [
+          'action_id',
+          'company_id',
+          'product_id',
+          'id',
+          'order_id',
+          'family_id',
+          'code',
+          'item_id',
+        ]) ??
+        '';
+    final titleValue =
+        _first(json, [
           'name',
           'title',
           'product_name',
@@ -40,10 +54,30 @@ class ApiItem {
     } else {
       title = title.replaceAll('_', ' '); // استبدال أي _ بمسافة عامةً
     }
-    final subtitle = _first(json, ['status', 'category', 'brand', 'short_description', 'created_at']);
+    final subtitle = _first(json, [
+      'status',
+      'category',
+      'brand',
+      'short_description',
+      'created_at',
+    ]);
     final description = _first(json, ['description', 'details', 'notes']);
-    var imageUrl = _first(json, ['image', 'image_url', 'photo', 'thumbnail'])?.toString();
-    final priceValue = _first(json, ['price', 'sell_price', 'unit_price', 'amount', 'final_price', 'total_price']);
+    var imageUrl = _first(json, [
+      'image',
+      'image_url',
+      'photo',
+      'thumbnail',
+    ])?.toString();
+    final priceValue = _first(json, [
+      'price',
+      'sell_price',
+      'unit_price',
+      'pricelist_carton',
+      'carton_price',
+      'amount',
+      'final_price',
+      'total_price',
+    ]);
 
     if (imageUrl != null && (imageUrl.isEmpty || imageUrl == 'null')) {
       imageUrl = null;

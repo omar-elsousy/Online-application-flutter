@@ -1,13 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'api_config.dart';
 import 'api_exception.dart';
 
 class ApiClient {
-  ApiClient({http.Client? httpClient}) : _httpClient = httpClient ?? http.Client();
+  static int _nextRequestId = 0;
+  static const Duration _requestTimeout = Duration(seconds: 30);
+
+  ApiClient({http.Client? httpClient})
+    : _httpClient = httpClient ?? http.Client();
 
   final http.Client _httpClient;
   String? _token;
@@ -41,41 +46,78 @@ class ApiClient {
     Map<String, dynamic>? body,
   }) async {
     final uri = ApiConfig.uri(path, query);
+    final requestId = ++_nextRequestId;
+    final requestLabel = '$method ${uri.origin}${uri.path}';
+    final stopwatch = Stopwatch()..start();
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'Accept-Language': PlatformDispatcher.instance.locale.languageCode,
       if (_token != null) 'Authorization': 'Bearer $_token',
     };
+
+    debugPrint('[API][$requestId] START $requestLabel');
 
     late http.Response response;
     try {
       switch (method) {
         case 'GET':
-          response = await _httpClient.get(uri, headers: headers).timeout(
-                const Duration(seconds: 30),
-              );
+          response = await _httpClient
+              .get(uri, headers: headers)
+              .timeout(_requestTimeout);
           break;
         case 'POST':
           response = await _httpClient
-              .post(uri, headers: headers, body: body == null ? null : jsonEncode(body))
-              .timeout(const Duration(seconds: 30));
+              .post(
+                uri,
+                headers: headers,
+                body: body == null ? null : jsonEncode(body),
+              )
+              .timeout(_requestTimeout);
           break;
         case 'PUT':
           response = await _httpClient
-              .put(uri, headers: headers, body: body == null ? null : jsonEncode(body))
-              .timeout(const Duration(seconds: 30));
+              .put(
+                uri,
+                headers: headers,
+                body: body == null ? null : jsonEncode(body),
+              )
+              .timeout(_requestTimeout);
           break;
         case 'DELETE':
           response = await _httpClient
-              .delete(uri, headers: headers, body: body == null ? null : jsonEncode(body))
-              .timeout(const Duration(seconds: 30));
+              .delete(
+                uri,
+                headers: headers,
+                body: body == null ? null : jsonEncode(body),
+              )
+              .timeout(_requestTimeout);
           break;
         default:
           throw ApiException('Unsupported method: $method');
       }
-    } on TimeoutException {
+    } on TimeoutException catch (error) {
+      stopwatch.stop();
+      debugPrint(
+        '[API][$requestId] TIMEOUT after ${stopwatch.elapsedMilliseconds}ms '
+        '(limit ${_requestTimeout.inSeconds}s): $requestLabel',
+      );
+      debugPrint('[API][$requestId] Timeout detail: $error');
       throw const ApiException('Connection timeout. Please try again.');
+    } on http.ClientException catch (error) {
+      stopwatch.stop();
+      debugPrint(
+        '[API][$requestId] NETWORK ERROR after ${stopwatch.elapsedMilliseconds}ms: '
+        '$requestLabel | ${error.message}',
+      );
+      rethrow;
     }
+
+    stopwatch.stop();
+    debugPrint(
+      '[API][$requestId] RESPONSE ${response.statusCode} after '
+      '${stopwatch.elapsedMilliseconds}ms: $requestLabel',
+    );
 
     final text = response.body;
     dynamic payload;

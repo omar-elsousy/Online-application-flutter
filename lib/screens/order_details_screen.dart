@@ -39,9 +39,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       debugPrint('Error loading order details: $e');
       if (mounted) {
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -51,10 +51,19 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Cancel Order'),
-        content: Text('Are you sure you want to cancel order #${widget.orderId}?'),
+        content: Text(
+          'Are you sure you want to cancel order #${widget.orderId}?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('NO')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('YES, CANCEL'), style: TextButton.styleFrom(foregroundColor: Colors.red)),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('NO'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('YES, CANCEL'),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+          ),
         ],
       ),
     );
@@ -73,115 +82,221 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _details == null || _details!.isEmpty
-              ? const Center(child: Text('Order details not found.'))
-              : ListView(
-                  padding: const EdgeInsets.all(20),
-                  children: [
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            _Row('Status', _details!['status']?.toString().toUpperCase() ?? 'N/A', bold: true),
-                            _Row('Date', _details!['created_at'] ?? 'N/A'),
-                            _Row('Total Price', '${_details!['final_price']} EGP', color: Theme.of(context).colorScheme.primary),
-                          ],
+          ? const Center(child: Text('Order details not found.'))
+          : ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        _Row(
+                          'Status',
+                          _details!['status']?.toString().toUpperCase() ??
+                              'N/A',
+                          bold: true,
+                        ),
+                        _Row('Date', _details!['created_at'] ?? 'N/A'),
+                        _Row(
+                          'Total Price',
+                          '${_details!['final_price']} EGP',
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        ..._walletCreditRows(),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Items',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                ...(_details!['items'] as List? ?? []).map((item) {
+                  final isGift =
+                      item['is_gift'] == true ||
+                      item['is_gift']?.toString() == '1';
+                  final discount =
+                      double.tryParse(
+                        item['discount_applied']?.toString() ?? '0',
+                      ) ??
+                      0;
+                  String? imageUrl = item['image']?.toString();
+                  if (imageUrl != null &&
+                      imageUrl.isNotEmpty &&
+                      !imageUrl.startsWith('http')) {
+                    imageUrl = 'http://10.1.104.82:8000/$imageUrl';
+                  }
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      leading: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child:
+                            imageUrl == null ||
+                                imageUrl == 'null' ||
+                                imageUrl.isEmpty
+                            ? const Icon(
+                                Icons.inventory_2_outlined,
+                                color: Colors.grey,
+                              )
+                            : Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.broken_image_outlined,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                      ),
+                      title: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item['name'] ?? 'Unknown Item',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          if (isGift)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 6),
+                              child: Icon(
+                                Icons.card_giftcard,
+                                color: Colors.green,
+                                size: 18,
+                              ),
+                            ),
+                        ],
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Qty: ${item['quantity']} | Price: ${item['unit_price']} EGP',
+                          ),
+                          if (isGift)
+                            const Text(
+                              'Gift item — free of charge',
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            )
+                          else if (discount > 0)
+                            Text(
+                              'Discount: ${discount.toStringAsFixed(2)} EGP',
+                              style: const TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          const SizedBox(height: 4),
+                          InkWell(
+                            onTap: () async {
+                              final product = ApiItem.fromJson(item);
+                              final state = AppScope.of(context);
+                              if (state.isFavourite(product.id)) {
+                                await state.removeFromFavourites(product);
+                              } else {
+                                await state.addToFavourites(product);
+                              }
+                              if (mounted) setState(() {});
+                            },
+                            child: Builder(
+                              builder: (context) {
+                                final state = AppScope.of(context);
+                                final isFav = state.isFavourite(
+                                  item['product_id']?.toString() ?? '',
+                                );
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      isFav
+                                          ? Icons.favorite
+                                          : Icons.favorite_border,
+                                      size: 14,
+                                      color: Colors.red,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      isFav
+                                          ? 'Remove from Favourites'
+                                          : 'Add to Favourites',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isFav ? Colors.red : Colors.blue,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      trailing: Text(
+                        '${item['total_price']} EGP',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    if (_details!['status']?.toString().toLowerCase() == 'placed')
-                      ElevatedButton.icon(
-                        onPressed: _loading ? null : _cancelOrder,
-                        icon: const Icon(Icons.cancel_outlined),
-                        label: const Text('CANCEL ORDER'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade50,
-                          foregroundColor: Colors.red,
-                          elevation: 0,
-                          padding: const EdgeInsets.all(16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.red.shade200)),
-                        ),
+                  );
+                }),
+                const SizedBox(height: 10),
+                if (_details!['status']?.toString().toLowerCase() == 'placed')
+                  ElevatedButton.icon(
+                    onPressed: _loading ? null : _cancelOrder,
+                    icon: const Icon(Icons.cancel_outlined),
+                    label: const Text('CANCEL ORDER'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade50,
+                      foregroundColor: Colors.red,
+                      elevation: 0,
+                      padding: const EdgeInsets.all(16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.red.shade200),
                       ),
-                    const SizedBox(height: 20),
-                    Text('Items', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 10),
-                    ...(_details!['items'] as List? ?? []).map((item) {
-                      String? imageUrl = item['image']?.toString();
-                      if (imageUrl != null && imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
-                        imageUrl = 'http://10.1.104.82:8000/$imageUrl';
-                      }
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        child: ListTile(
-                          leading: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: imageUrl == null || imageUrl == 'null' || imageUrl.isEmpty
-                                ? const Icon(Icons.inventory_2_outlined, color: Colors.grey)
-                                : Image.network(
-                                    imageUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.grey),
-                                  ),
-                          ),
-                          title: Text(item['name'] ?? 'Unknown Item', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Qty: ${item['quantity']} | Price: ${item['unit_price']} EGP'),
-                              const SizedBox(height: 4),
-                              InkWell(
-                                onTap: () async {
-                                  final product = ApiItem.fromJson(item);
-                                  final state = AppScope.of(context);
-                                  if (state.isFavourite(product.id)) {
-                                    await state.removeFromFavourites(product);
-                                  } else {
-                                    await state.addToFavourites(product);
-                                  }
-                                  if (mounted) setState(() {});
-                                },
-                                child: Builder(
-                                  builder: (context) {
-                                    final state = AppScope.of(context);
-                                    final isFav = state.isFavourite(item['product_id']?.toString() ?? '');
-                                    return Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          isFav ? Icons.favorite : Icons.favorite_border,
-                                          size: 14,
-                                          color: Colors.red,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          isFav ? 'Remove from Favourites' : 'Add to Favourites',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: isFav ? Colors.red : Colors.blue,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          trailing: Text('${item['total_price']} EGP', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
-                        ),
-                      );
-                    }),
-                  ],
-                ),
+                    ),
+                  ),
+              ],
+            ),
     );
+  }
+
+  List<Widget> _walletCreditRows() {
+    final credits = _details?['wallet_credits'] as List? ?? const [];
+    if (credits.isEmpty) return const [];
+
+    return credits
+        .where((credit) => credit['status']?.toString() == 'USED')
+        .map((credit) {
+          final amount =
+              double.tryParse(credit['incentive_value']?.toString() ?? '0') ??
+              0;
+          return _Row(
+            'FIX incentive #${credit['incentive_type_id'] ?? 'N/A'}',
+            '-${amount.toStringAsFixed(2)} EGP',
+            color: Colors.green,
+          );
+        })
+        .toList();
   }
 
   Widget _Row(String label, String value, {bool bold = false, Color? color}) {
@@ -191,7 +306,14 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(color: Colors.grey)),
-          Text(value, style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal, color: color, fontSize: bold ? 16 : 14)),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+              color: color,
+              fontSize: bold ? 16 : 14,
+            ),
+          ),
         ],
       ),
     );

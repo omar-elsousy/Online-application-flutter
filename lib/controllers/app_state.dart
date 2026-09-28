@@ -33,11 +33,25 @@ class AppState extends ChangeNotifier {
   bool isHomeLoading = false;
   bool hasLoadedHome = false;
   bool _isFetching = false;
+  int _cartStateRevision = 0;
+  int _cartPricingOperationCount = 0;
+  bool isCartPricingLoading = false;
+  bool isCartDataRefreshing = false;
+  bool isCartPreviewReady = false;
+  bool isWalletCreditsReady = false;
+  String? cartPricingError;
+  String? _updatingWalletCreditKey;
   String? error;
   String? userMobile;
 
   double serverCartTotal = 0;
+  Map<String, dynamic> cartTotals = const {};
+  List<Map<String, dynamic>> cartGiftItems = const [];
+  final Set<int> removedGiftIncentiveIds = {};
+  final Map<String, String> cartIncentiveBanners = {};
+  List<Map<String, dynamic>> walletCredits = const [];
   int serverCartCount = 0;
+  final List<Map<String, dynamic>> selectedWalletCredits = [];
 
   double targetAchieved = 0;
   double targetSales = 0;
@@ -45,6 +59,38 @@ class AppState extends ChangeNotifier {
   bool get isAuthenticated => apiClient.isAuthenticated;
   int get cartCount => serverCartCount;
   double get cartTotal => serverCartTotal;
+
+  bool isWalletCreditUpdating(Map<String, dynamic> credit) =>
+      _updatingWalletCreditKey == _walletCreditKey(credit);
+
+  String _walletCreditKey(Map<String, dynamic> credit) =>
+      '${credit['incentive_type_id']}|${credit['from_date']}|${credit['to_date']}';
+
+  void _beginCartPricing({bool refreshWalletCredits = false}) {
+    if (_cartPricingOperationCount++ == 0) {
+      isCartPricingLoading = true;
+      isCartPreviewReady = false;
+      cartPricingError = null;
+      cartTotals = const {};
+      serverCartTotal = 0;
+      cartGiftItems = const [];
+      cartIncentiveBanners.clear();
+      if (refreshWalletCredits) {
+        isWalletCreditsReady = false;
+        isCartDataRefreshing = true;
+      }
+    }
+    notifyListeners();
+  }
+
+  void _endCartPricing() {
+    if (_cartPricingOperationCount > 0) _cartPricingOperationCount--;
+    if (_cartPricingOperationCount == 0) {
+      isCartPricingLoading = false;
+      isCartDataRefreshing = false;
+    }
+    notifyListeners();
+  }
 
   bool isFavourite(String productId) {
     return favourites.any((p) => p.id == productId);
@@ -104,6 +150,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> loadHome() async {
     if (_isFetching) return;
+    _beginCartPricing(refreshWalletCredits: true);
     _isFetching = true;
     isHomeLoading = true;
     notifyListeners();
@@ -136,8 +183,6 @@ class AppState extends ChangeNotifier {
 
         final cartData = results[2]['data'];
         if (cartData != null) {
-          serverCartTotal =
-              double.tryParse(cartData['final_price']?.toString() ?? '0') ?? 0;
           serverCartCount =
               int.tryParse(cartData['number_of_products']?.toString() ?? '0') ??
               0;
@@ -193,6 +238,8 @@ class AppState extends ChangeNotifier {
           userPoints = pointsSummary!.points;
         }
 
+        await Future.wait([loadCartPreview(), loadWalletCredits()]);
+
         // تحميل الهدايا بشكل مستقل بعد التحميل الأساسي
         loadPointsGifts();
       });
@@ -200,6 +247,7 @@ class AppState extends ChangeNotifier {
     } finally {
       _isFetching = false;
       isHomeLoading = false;
+      _endCartPricing();
       notifyListeners();
     }
   }
@@ -305,14 +353,147 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loadCartPreview() async {
+    _beginCartPricing();
+    final revision = _cartStateRevision;
+    try {
+      final payload = await apiClient.post(
+        ApiEndpoints.incentiveCartPreview,
+        body: {
+          'wallet_credits': selectedWalletCredits,
+          'removed_gift_incentive_ids': removedGiftIncentiveIds.toList(),
+        },
+      );
+      if (revision != _cartStateRevision) return;
+      final data = Map<String, dynamic>.from(payload['data'] ?? const {});
+      final totals = data['totals'];
+      if (totals is! Map) {
+        throw const FormatException('Cart totals were not returned.');
+      }
+      cartTotals = Map<String, dynamic>.from(totals);
+      cartGiftItems = (data['gift_items'] as List? ?? const [])
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList();
+      cartIncentiveBanners
+        ..clear()
+        ..addEntries(
+          (data['items'] as List? ?? const [])
+              .map((item) {
+                final line = Map<String, dynamic>.from(item as Map);
+                return MapEntry(
+                  line['product_id'].toString(),
+                  line['incentive_banner']?.toString() ?? '',
+                );
+              })
+              .where((entry) => entry.value.isNotEmpty),
+        );
+      serverCartTotal =
+          double.tryParse(cartTotals['grand_total']?.toString() ?? '') ?? 0;
+      isCartPreviewReady = true;
+      if (isWalletCreditsReady) cartPricingError = null;
+      notifyListeners();
+    } catch (e) {
+      cartPricingError = 'Could not calculate the final cart total.';
+      debugPrint('Incentive preview error: $e');
+    } finally {
+      _endCartPricing();
+    }
+  }
+
+  Future<void> toggleWalletCredit(Map<String, dynamic> credit) async {
+    if (isCartPricingLoading) return;
+    _updatingWalletCreditKey = _walletCreditKey(credit);
+    _beginCartPricing();
+    _cartStateRevision++;
+    final index = selectedWalletCredits.indexWhere(
+      (item) =>
+          item['incentive_type_id'].toString() ==
+              credit['incentive_type_id'].toString() &&
+          item['from_date'].toString() == credit['from_date'].toString() &&
+          item['to_date'].toString() == credit['to_date'].toString(),
+    );
+    if (index == -1) {
+      selectedWalletCredits.add(Map<String, dynamic>.from(credit));
+    } else {
+      selectedWalletCredits.removeAt(index);
+    }
+    notifyListeners();
+    try {
+      await loadCartPreview();
+    } finally {
+      _updatingWalletCreditKey = null;
+      _endCartPricing();
+    }
+  }
+
+  Future<void> removeGiftIncentive(int incentiveId) async {
+    _beginCartPricing();
+    _cartStateRevision++;
+    removedGiftIncentiveIds.add(incentiveId);
+    try {
+      await loadCartPreview();
+    } finally {
+      _endCartPricing();
+    }
+  }
+
+  String? incentiveBannerFor(String productId) {
+    final banner = cartIncentiveBanners[productId];
+    return banner == null || banner.isEmpty ? null : banner;
+  }
+
+  bool isWalletCreditSelected(Map<String, dynamic> credit) =>
+      selectedWalletCredits.any(
+        (item) =>
+            item['incentive_type_id'].toString() ==
+                credit['incentive_type_id'].toString() &&
+            item['from_date'].toString() == credit['from_date'].toString() &&
+            item['to_date'].toString() == credit['to_date'].toString(),
+      );
+  Future<void> loadWalletCredits() async {
+    _beginCartPricing(refreshWalletCredits: true);
+    final revision = _cartStateRevision;
+    try {
+      final payload = await apiClient.get(ApiEndpoints.walletAvailable);
+      if (revision != _cartStateRevision) return;
+      isWalletCreditsReady = true;
+      walletCredits = (payload['data'] as List? ?? const [])
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList();
+
+      final selectedCount = selectedWalletCredits.length;
+      selectedWalletCredits.removeWhere(
+        (selected) => !walletCredits.any(
+          (available) =>
+              selected['incentive_type_id'].toString() ==
+                  available['incentive_type_id'].toString() &&
+              selected['from_date'].toString() ==
+                  available['from_date'].toString() &&
+              selected['to_date'].toString() == available['to_date'].toString(),
+        ),
+      );
+      final selectionChanged = selectedWalletCredits.length != selectedCount;
+      if (selectionChanged) _cartStateRevision++;
+      if (isCartPreviewReady) cartPricingError = null;
+      notifyListeners();
+      if (selectionChanged) await loadCartPreview();
+    } catch (e) {
+      cartPricingError = 'Could not load cart incentives.';
+      debugPrint('Wallet loading error: $e');
+    } finally {
+      _endCartPricing();
+    }
+  }
+
   Future<void> syncCart() async {
     if (_isFetching) return;
+    _beginCartPricing(refreshWalletCredits: true);
+    final revision = ++_cartStateRevision;
     try {
       final payload = await apiClient.get(ApiEndpoints.getCart);
+      if (revision != _cartStateRevision) return;
       final data = payload['data'];
       if (data != null) {
-        serverCartTotal =
-            double.tryParse(data['final_price']?.toString() ?? '0') ?? 0;
         serverCartCount =
             int.tryParse(data['number_of_products']?.toString() ?? '0') ?? 0;
         final List<dynamic> items = data['items'] ?? [];
@@ -328,10 +509,14 @@ class AppState extends ChangeNotifier {
           );
         }
         serverCartCount = cart.length;
+        await Future.wait([loadCartPreview(), loadWalletCredits()]);
         notifyListeners();
       }
     } catch (e) {
+      cartPricingError = 'Could not refresh the cart.';
       debugPrint('Cart sync error: $e');
+    } finally {
+      _endCartPricing();
     }
   }
 
@@ -364,6 +549,7 @@ class AppState extends ChangeNotifier {
     final previousCount = serverCartCount;
     final previousTotal = serverCartTotal;
 
+    _beginCartPricing(refreshWalletCredits: true);
     error = null;
     _optimisticUpdate(product, quantity);
     try {
@@ -379,11 +565,15 @@ class AppState extends ChangeNotifier {
       serverCartCount = previousCount;
       serverCartTotal = previousTotal;
       error = e.toString();
+      cartPricingError = 'Could not update the cart total.';
       notifyListeners();
+    } finally {
+      _endCartPricing();
     }
   }
 
   Future<void> updateCartQuantity(ApiItem product, int delta) async {
+    _beginCartPricing(refreshWalletCredits: true);
     int currentQty = 0;
     int index = cart.indexWhere((l) => l.product.id == product.id);
     if (index != -1) currentQty = cart[index].quantity;
@@ -409,10 +599,13 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       error = e.toString();
       await syncCart();
+    } finally {
+      _endCartPricing();
     }
   }
 
   Future<void> setCartQuantity(ApiItem product, int newQty) async {
+    _beginCartPricing(refreshWalletCredits: true);
     _optimisticSet(product, newQty);
     try {
       await apiClient.delete('${ApiEndpoints.removeFromCart}/${product.id}');
@@ -426,10 +619,13 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       error = e.toString();
       await syncCart();
+    } finally {
+      _endCartPricing();
     }
   }
 
   void _optimisticUpdate(ApiItem product, int delta) {
+    _cartStateRevision++;
     final index = cart.indexWhere((line) => line.product.id == product.id);
     if (index == -1) {
       if (delta > 0) {
@@ -449,6 +645,7 @@ class AppState extends ChangeNotifier {
   }
 
   void _optimisticSet(ApiItem product, int newQty) {
+    _cartStateRevision++;
     final index = cart.indexWhere((l) => l.product.id == product.id);
     if (newQty <= 0) {
       if (index != -1) cart.removeAt(index);
@@ -459,6 +656,8 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> removeFromCart(ApiItem product) async {
+    _beginCartPricing(refreshWalletCredits: true);
+    _cartStateRevision++;
     final index = cart.indexWhere((l) => l.product.id == product.id);
     if (index != -1) {
       cart.removeAt(index);
@@ -470,6 +669,8 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       error = e.toString();
       await syncCart();
+    } finally {
+      _endCartPricing();
     }
   }
 
@@ -478,12 +679,25 @@ class AppState extends ChangeNotifier {
     if (cart.isEmpty || isLoading) return null;
     String? orderId;
     await _guard(() async {
-      final payload = await apiClient.post(ApiEndpoints.placeOrder);
+      final payload = await apiClient.post(
+        ApiEndpoints.placeOrder,
+        body: {
+          'wallet_credits': selectedWalletCredits,
+          'removed_gift_incentive_ids': removedGiftIncentiveIds.toList(),
+        },
+      );
       if (payload['order_id'] != null) {
         orderId = payload['order_id'].toString();
+        // Prevent older cart/preview responses from restoring pre-checkout data.
+        _cartStateRevision++;
         cart.clear();
         serverCartTotal = 0;
         serverCartCount = 0;
+        selectedWalletCredits.clear();
+        removedGiftIncentiveIds.clear();
+        cartTotals = const {};
+        cartGiftItems = const [];
+        cartIncentiveBanners.clear();
         notifyListeners();
       }
     });

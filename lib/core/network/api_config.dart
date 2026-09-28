@@ -37,6 +37,8 @@ class ApiEndpoints {
   static const String productDetails = '/getProductDetails';
   static const String addToCart = '/addToCart';
   static const String getCart = '/getCart';
+  static const String incentiveCartPreview = '/incentives/cart-preview';
+  static const String walletAvailable = '/wallet/available';
   static const String removeFromCart = '/removeFromCart';
   static const String placeOrder = '/placeOrder';
   static const String getOrders = '/getOrders';

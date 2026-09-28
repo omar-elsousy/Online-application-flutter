@@ -4,10 +4,11 @@ import '../../widgets/app_error_banner.dart';
 import '../../utils/app_dialogs.dart';
 import '../../utils/search_utils.dart';
 import '../../widgets/app_search_field.dart';
-import '../order_details_screen.dart';
 
 class CartTab extends StatefulWidget {
-  const CartTab({super.key});
+  const CartTab({super.key, this.onCheckoutSuccess});
+
+  final ValueChanged<String>? onCheckoutSuccess;
 
   @override
   State<CartTab> createState() => _CartTabState();
@@ -19,6 +20,10 @@ class _CartTabState extends State<CartTab> {
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
+    final cartSummaryReady =
+        state.isCartPreviewReady &&
+        state.isWalletCreditsReady &&
+        state.cartPricingError == null;
     final filteredCart = state.cart
         .where((line) => matchesApiItemSearch(line.product, _query))
         .toList();
@@ -42,6 +47,46 @@ class _CartTabState extends State<CartTab> {
             child: AppErrorBanner(message: state.error!),
           ),
 
+        if (state.cartGiftItems.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Column(
+              children: state.cartGiftItems
+                  .map(
+                    (gift) => Card(
+                      color: Colors.green.withValues(alpha: 0.08),
+                      child: ListTile(
+                        leading: const Icon(
+                          Icons.card_giftcard,
+                          color: Colors.green,
+                        ),
+                        title: Text(gift['name']?.toString() ?? 'Gift'),
+                        subtitle: Text(
+                          'Quantity: ${gift['quantity']} • ${gift['unit_price'] ?? 0} EGP (Free)',
+                        ),
+                        trailing: IconButton(
+                          tooltip: 'Remove gift',
+                          onPressed: state.isLoading
+                              ? null
+                              : () => state.removeGiftIncentive(
+                                  int.tryParse(
+                                        gift['source_incentive_id']
+                                                ?.toString() ??
+                                            '',
+                                      ) ??
+                                      0,
+                                ),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
         // 2. قائمة المنتجات (تأخذ المساحة المتاحة فقط بين التنبيه والزرار)
         Expanded(
           child: filteredCart.isEmpty
@@ -186,6 +231,35 @@ class _CartTabState extends State<CartTab> {
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
+                                      if (state.incentiveBannerFor(
+                                            product.id,
+                                          ) !=
+                                          null)
+                                        Container(
+                                          margin: const EdgeInsets.only(top: 6),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.withValues(
+                                              alpha: 0.12,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            state.incentiveBannerFor(
+                                              product.id,
+                                            )!,
+                                            style: const TextStyle(
+                                              color: Colors.green,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
                                       if (product.raw['unit_tax'] != null &&
                                           product.raw['unit_tax'] != 0)
                                         Text(
@@ -251,6 +325,71 @@ class _CartTabState extends State<CartTab> {
                 ),
         ),
 
+        if (state.isCartDataRefreshing)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(18, 8, 18, 8),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 10),
+                Expanded(child: Text('Checking available incentives...')),
+              ],
+            ),
+          )
+        else if (!state.isWalletCreditsReady && state.cartPricingError != null)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(18, 8, 18, 8),
+            child: Text(
+              'Could not load available incentives. Refresh to try again.',
+              style: TextStyle(color: Colors.red),
+            ),
+          )
+        else if (state.walletCredits.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 4, 18, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Available wallet credits',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                ...state.walletCredits.map((credit) {
+                  final selected = state.isWalletCreditSelected(credit);
+                  final value =
+                      double.tryParse(
+                        credit['incentive_value']?.toString() ?? '0',
+                      ) ??
+                      0;
+                  return Card(
+                    color: selected
+                        ? Theme.of(context).colorScheme.primaryContainer
+                        : null,
+                    child: CheckboxListTile(
+                      value: selected,
+                      secondary: state.isWalletCreditUpdating(credit)
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : null,
+                      onChanged: state.isLoading || state.isCartPricingLoading
+                          ? null
+                          : (_) => state.toggleWalletCredit(credit),
+                      title: Text('${value.toStringAsFixed(2)} EGP credit'),
+                      subtitle: Text('Valid until ${credit['to_date'] ?? ''}'),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
         // 3. قسم الدفع (Checkout) مثبت دائماً في الأسفل وبدون تداخل
         Container(
           padding: const EdgeInsets.all(20),
@@ -286,6 +425,57 @@ class _CartTabState extends State<CartTab> {
                     ),
                   ],
                 ),
+                if (state.isCartPricingLoading) ...[
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Calculating final total and incentives...',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else if (cartSummaryReady) ...[
+                  const SizedBox(height: 10),
+                  _MoneyRow(
+                    label: 'Subtotal',
+                    value: state.cartTotals['subtotal'],
+                  ),
+                  _MoneyRow(
+                    label: 'Discounts',
+                    value: state.cartTotals['total_discount'],
+                    negative: true,
+                  ),
+                  _MoneyRow(label: 'Tax', value: state.cartTotals['total_tax']),
+                  if ((double.tryParse(
+                            state.cartTotals['wallet_used']?.toString() ?? '0',
+                          ) ??
+                          0) >
+                      0)
+                    _MoneyRow(
+                      label: 'Wallet used',
+                      value: state.cartTotals['wallet_used'],
+                      negative: true,
+                    ),
+                ] else ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      state.cartPricingError ??
+                          'The final total is not ready yet. Refresh to retry.',
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -297,31 +487,42 @@ class _CartTabState extends State<CartTab> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
-                      '${state.cartTotal.toStringAsFixed(2)} EGP',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
+                    if (state.isCartPricingLoading)
+                      const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else if (cartSummaryReady)
+                      Text(
+                        '${state.cartTotal.toStringAsFixed(2)} EGP',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      )
+                    else
+                      const Text('—'),
                   ],
                 ),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: (state.cart.isEmpty || state.isLoading)
+                    onPressed:
+                        (state.cart.isEmpty ||
+                            state.isLoading ||
+                            state.isCartPricingLoading ||
+                            !cartSummaryReady)
                         ? null
                         : () async {
                             final orderId = await state.checkout();
                             if (context.mounted && orderId != null) {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      OrderDetailsScreen(orderId: orderId),
-                                ),
-                              );
+                              await state.loadOrders();
+                              if (context.mounted) {
+                                widget.onCheckoutSuccess?.call(orderId);
+                              }
                             }
                             // لاحظ: حذفنا الـ SnackBar هنا لأن الرسالة تظهر بالفعل في الأعلى تلقائياً
                           },
@@ -354,6 +555,32 @@ class _CartTabState extends State<CartTab> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _MoneyRow extends StatelessWidget {
+  const _MoneyRow({
+    required this.label,
+    required this.value,
+    this.negative = false,
+  });
+  final String label;
+  final dynamic value;
+  final bool negative;
+
+  @override
+  Widget build(BuildContext context) {
+    final amount = double.tryParse(value?.toString() ?? '0') ?? 0;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text('${negative ? '-' : ''}${amount.toStringAsFixed(2)} EGP'),
+        ],
+      ),
     );
   }
 }

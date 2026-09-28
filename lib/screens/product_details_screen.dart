@@ -41,16 +41,18 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
     final item = _details ?? widget.product;
-    
+    final incentiveBanner =
+        state.incentiveBannerFor(item.id) ??
+        item.raw['incentive_teaser']?.toString();
+
     // إذا كان الاسم لا يزال عبارة عن placeholder أو ID، نظهر Loading
-    final displayTitle = (item.title.contains('#') || item.title == 'Details') && _loading 
-        ? 'Loading Product...' 
+    final displayTitle =
+        (item.title.contains('#') || item.title == 'Details') && _loading
+        ? 'Loading Product...'
         : item.title;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(displayTitle),
-      ),
+      appBar: AppBar(title: Text(displayTitle)),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -60,14 +62,23 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 Container(
                   height: 240,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primaryContainer.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(30),
                   ),
                   child: item.imageUrl == null
-                      ? Icon(Icons.inventory_2_outlined, size: 80, color: Theme.of(context).colorScheme.primary)
+                      ? Icon(
+                          Icons.inventory_2_outlined,
+                          size: 80,
+                          color: Theme.of(context).colorScheme.primary,
+                        )
                       : ClipRRect(
                           borderRadius: BorderRadius.circular(30),
-                          child: Image.network(item.imageUrl!, fit: BoxFit.cover),
+                          child: Image.network(
+                            item.imageUrl!,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                 ),
                 const SizedBox(height: 24),
@@ -93,16 +104,51 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 const Divider(),
 
                 // 6. Tax
-                _DetailRow(label: 'Tax', value: '${item.raw['tax'] ?? '0'} EGP'),
+                _DetailRow(
+                  label: 'Tax',
+                  value: '${item.raw['tax'] ?? '0'} EGP',
+                ),
                 const Divider(),
 
                 // 7. Status
                 _DetailRow(
                   label: 'Status',
                   value: item.raw['status'] ?? 'N/A',
-                  valueColor: (item.raw['status']?.toString().contains('in stock') ?? false) ? Colors.green : Colors.orange,
+                  valueColor:
+                      (item.raw['status']?.toString().contains('in stock') ??
+                          false)
+                      ? Colors.green
+                      : Colors.orange,
                 ),
 
+                if (incentiveBanner != null) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.local_offer_outlined,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            incentiveBanner,
+                            style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 30),
                 Row(
                   children: [
@@ -111,64 +157,100 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                           ? Container(
                               height: 54,
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primaryContainer,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primaryContainer,
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
                                 children: [
                                   IconButton(
                                     icon: const Icon(Icons.remove),
-                                    onPressed: state.isLoading ? null : () => state.updateCartQuantity(item, -1),
+                                    onPressed: state.isLoading
+                                        ? null
+                                        : () => state.updateCartQuantity(
+                                            item,
+                                            -1,
+                                          ),
                                   ),
                                   Text(
                                     '${state.getProductQuantity(item.id)} IN CART',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.add),
-                                    onPressed: state.isLoading ? null : () => state.updateCartQuantity(item, 1),
+                                    onPressed: state.isLoading
+                                        ? null
+                                        : () =>
+                                              state.updateCartQuantity(item, 1),
                                   ),
                                 ],
                               ),
                             )
                           : ElevatedButton.icon(
-                              onPressed: state.isLoading ? null : () => state.addToCart(item),
+                              onPressed: state.isLoading
+                                  ? null
+                                  : () => state.addToCart(item),
                               icon: const Icon(Icons.add_shopping_cart),
                               label: const Text('ADD TO CART'),
                               style: ElevatedButton.styleFrom(
                                 padding: const EdgeInsets.all(16),
-                                textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                textStyle: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
                               ),
                             ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: state.isLoading ? null : () async {
-                          if (state.isFavourite(item.id)) {
-                            await state.removeFromFavourites(item);
-                          } else {
-                            await state.addToFavourites(item);
-                          }
-                        },
+                        onPressed: state.isLoading
+                            ? null
+                            : () async {
+                                if (state.isFavourite(item.id)) {
+                                  await state.removeFromFavourites(item);
+                                } else {
+                                  await state.addToFavourites(item);
+                                }
+                              },
                         icon: Icon(
-                          state.isFavourite(item.id) ? Icons.favorite : Icons.favorite_border,
-                          color: state.isFavourite(item.id) ? Colors.red : Colors.grey,
+                          state.isFavourite(item.id)
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          color: state.isFavourite(item.id)
+                              ? Colors.red
+                              : Colors.grey,
                         ),
                         label: Text(
-                          state.isFavourite(item.id) ? 'UNFAVOURITE' : 'FAVOURITE',
+                          state.isFavourite(item.id)
+                              ? 'UNFAVOURITE'
+                              : 'FAVOURITE',
                           style: TextStyle(
-                            color: state.isFavourite(item.id) ? Colors.red : Colors.grey.shade700,
+                            color: state.isFavourite(item.id)
+                                ? Colors.red
+                                : Colors.grey.shade700,
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.all(16),
-                          side: BorderSide(color: state.isFavourite(item.id) ? Colors.red : Colors.grey.shade300),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          side: BorderSide(
+                            color: state.isFavourite(item.id)
+                                ? Colors.red
+                                : Colors.grey.shade300,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
                       ),
                     ),
@@ -205,7 +287,10 @@ class _DetailRow extends StatelessWidget {
             width: 100,
             child: Text(
               label,
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
             ),
           ),
           Expanded(

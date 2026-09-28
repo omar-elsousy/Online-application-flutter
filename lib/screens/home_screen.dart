@@ -7,6 +7,7 @@ import 'home/orders_tab.dart';
 import 'home/profile_tab.dart';
 import 'home/target_tab.dart';
 import 'notifications_screen.dart';
+import 'order_details_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,6 +27,16 @@ class _HomeScreenState extends State<HomeScreen> {
     GlobalKey<NavigatorState>(),
     GlobalKey<NavigatorState>(),
   ];
+
+  void _openNewOrderDetails(String orderId) {
+    setState(() => _tab = 3);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _navigatorKeys[3].currentState?.push(
+        MaterialPageRoute(builder: (_) => OrderDetailsScreen(orderId: orderId)),
+      );
+    });
+  }
 
   @override
   void initState() {
@@ -65,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final pages = [
       const CatalogTab(),
       const TargetTab(),
-      const CartTab(),
+      CartTab(onCheckoutSuccess: _openNewOrderDetails),
       const OrdersTab(),
       const ProfileTab(),
     ];

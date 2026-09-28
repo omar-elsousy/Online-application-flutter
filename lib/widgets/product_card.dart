@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/api_item.dart';
+import '../controllers/app_scope.dart';
 
 class ProductCard extends StatelessWidget {
   const ProductCard({
@@ -25,6 +26,9 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final incentiveBanner =
+        AppScope.of(context).incentiveBannerFor(product.id) ??
+        product.raw['incentive_teaser']?.toString();
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(24),
@@ -38,7 +42,9 @@ class ProductCard extends StatelessWidget {
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.4),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primaryContainer.withOpacity(0.4),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: product.imageUrl == null
@@ -65,7 +71,10 @@ class ProductCard extends StatelessWidget {
                 product.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
               ),
               Text(
                 'ID: ${product.id}',
@@ -74,9 +83,15 @@ class ProductCard extends StatelessWidget {
               const SizedBox(height: 4),
               if (product.raw['status'] != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
-                    color: product.raw['status'].toString().toLowerCase().contains('in stock')
+                    color:
+                        product.raw['status'].toString().toLowerCase().contains(
+                          'in stock',
+                        )
                         ? Colors.green.withOpacity(0.1)
                         : Colors.orange.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
@@ -84,7 +99,11 @@ class ProductCard extends StatelessWidget {
                   child: Text(
                     product.raw['status'].toString().toUpperCase(),
                     style: TextStyle(
-                      color: product.raw['status'].toString().toLowerCase().contains('in stock')
+                      color:
+                          product.raw['status']
+                              .toString()
+                              .toLowerCase()
+                              .contains('in stock')
                           ? Colors.green
                           : Colors.orange,
                       fontSize: 9,
@@ -103,6 +122,27 @@ class ProductCard extends StatelessWidget {
                   fontSize: 13,
                 ),
               ),
+              if (incentiveBanner != null) ...[
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    incentiveBanner,
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 8),
               // استخدام Row مع Expanded لضمان توزيع المساحة ومنع الأوفر فلو
               Row(
@@ -113,7 +153,9 @@ class ProductCard extends StatelessWidget {
                         ? Container(
                             height: 38,
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: FittedBox(
@@ -126,7 +168,10 @@ class ProductCard extends StatelessWidget {
                                   ),
                                   Text(
                                     '$quantity',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.add, size: 18),
@@ -141,7 +186,9 @@ class ProductCard extends StatelessWidget {
                             icon: const Icon(Icons.add_shopping_cart, size: 16),
                             style: IconButton.styleFrom(
                               minimumSize: const Size(0, 38),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                           ),
                   ),
@@ -155,7 +202,11 @@ class ProductCard extends StatelessWidget {
                         child: Container(
                           height: 38,
                           decoration: BoxDecoration(
-                            border: Border.all(color: isFavourite ? Colors.red.withOpacity(0.5) : Colors.blue.withOpacity(0.2)),
+                            border: Border.all(
+                              color: isFavourite
+                                  ? Colors.red.withOpacity(0.5)
+                                  : Colors.blue.withOpacity(0.2),
+                            ),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -165,7 +216,9 @@ class ProductCard extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  isFavourite ? Icons.favorite : Icons.favorite_border,
+                                  isFavourite
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
                                   size: 16,
                                   color: Colors.red,
                                 ),
@@ -174,7 +227,9 @@ class ProductCard extends StatelessWidget {
                                   isFavourite ? 'Remove' : 'Add Fav',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: isFavourite ? Colors.red : Colors.blue,
+                                    color: isFavourite
+                                        ? Colors.red
+                                        : Colors.blue,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),

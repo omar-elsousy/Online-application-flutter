@@ -23,13 +23,15 @@ class _CatalogTabState extends State<CatalogTab> {
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
-    
+    final normalizedQuery = query.trim().toLowerCase();
+    final isSearching = normalizedQuery.isNotEmpty;
+
     final filteredCompanies = state.companies
-        .where((item) => item.title.toLowerCase().contains(query.toLowerCase()))
+        .where((item) => item.title.toLowerCase().contains(normalizedQuery))
         .toList();
 
     final filteredLatestOffers = state.latestOffers
-        .where((item) => item.title.toLowerCase().contains(query.toLowerCase()))
+        .where((item) => item.title.toLowerCase().contains(normalizedQuery))
         .toList();
 
     return RefreshIndicator(
@@ -49,33 +51,35 @@ class _CatalogTabState extends State<CatalogTab> {
             AppErrorBanner(message: state.error!),
             const SizedBox(height: 14),
           ],
-          
+
           // كارت My Points
-          if (query.isEmpty) ...[
+          if (!isSearching) ...[
             _MyPointsCard(
               points: state.userPoints,
               nextResetDate: state.pointsSummary?.nextResetDate,
-              onTap: () => Navigator.of(context, rootNavigator: true).push(
-                MaterialPageRoute(builder: (_) => const PointsScreen()),
-              ),
+              onTap: () => Navigator.of(
+                context,
+                rootNavigator: true,
+              ).push(MaterialPageRoute(builder: (_) => const PointsScreen())),
             ),
             const SizedBox(height: 16),
           ],
-          
+
           // إخفاء الـ Carousel عند البحث لترك مساحة لنتائج البحث
-          if (query.isEmpty) ...[
+          if (!isSearching) ...[
             _SectionHeader(
               title: 'Sections',
-              action: '${state.sections.isNotEmpty ? state.sections.length : 3} found',
+              action:
+                  '${state.sections.isNotEmpty ? state.sections.length : 3} found',
             ),
             const SizedBox(height: 10),
             _SectionsCarousel(sections: state.sections),
             const SizedBox(height: 22),
           ],
-          
+
           if (filteredLatestOffers.isNotEmpty) ...[
             _SectionHeader(
-              title: 'Latest Offers', 
+              title: 'Latest Offers',
               action: 'View All',
               onActionTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const LatestOffersScreen()),
@@ -91,12 +95,13 @@ class _CatalogTabState extends State<CatalogTab> {
                 itemBuilder: (context, index) {
                   final product = filteredLatestOffers[index];
                   return Container(
-                    width: 220, 
+                    width: 220,
                     margin: const EdgeInsets.only(right: 12),
                     child: ProductCard(
                       product: product,
                       quantity: state.getProductQuantity(product.id),
-                      onUpdateQuantity: (delta) => state.updateCartQuantity(product, delta),
+                      onUpdateQuantity: (delta) =>
+                          state.updateCartQuantity(product, delta),
                       isFavourite: state.isFavourite(product.id),
                       onFavourite: () async {
                         if (state.isFavourite(product.id)) {
@@ -108,7 +113,8 @@ class _CatalogTabState extends State<CatalogTab> {
                       onAdd: () => state.addToCart(product),
                       onOpen: () => Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => ProductDetailsScreen(product: product),
+                          builder: (_) =>
+                              ProductDetailsScreen(product: product),
                         ),
                       ),
                     ),
@@ -120,7 +126,10 @@ class _CatalogTabState extends State<CatalogTab> {
           ],
 
           if (filteredCompanies.isNotEmpty) ...[
-            _SectionHeader(title: 'Companies', action: '${filteredCompanies.length} found'),
+            _SectionHeader(
+              title: 'Companies',
+              action: '${filteredCompanies.length} found',
+            ),
             const SizedBox(height: 10),
             GridView.builder(
               shrinkWrap: true,
@@ -137,7 +146,9 @@ class _CatalogTabState extends State<CatalogTab> {
                 return InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => CompanyCategoriesScreen(company: company)),
+                    MaterialPageRoute(
+                      builder: (_) => CompanyCategoriesScreen(company: company),
+                    ),
                   ),
                   child: Card(
                     child: Padding(
@@ -148,16 +159,28 @@ class _CatalogTabState extends State<CatalogTab> {
                             width: 60,
                             height: 60,
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.4),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primaryContainer.withOpacity(0.4),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             clipBehavior: Clip.antiAlias,
-                            child: company.imageUrl == null || company.imageUrl!.isEmpty
-                                ? const Icon(Icons.business_outlined, size: 28, color: Colors.grey)
+                            child:
+                                company.imageUrl == null ||
+                                    company.imageUrl!.isEmpty
+                                ? const Icon(
+                                    Icons.business_outlined,
+                                    size: 28,
+                                    color: Colors.grey,
+                                  )
                                 : Image.network(
                                     company.imageUrl!,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, size: 28, color: Colors.grey),
+                                    errorBuilder: (_, __, ___) => const Icon(
+                                      Icons.broken_image_outlined,
+                                      size: 28,
+                                      color: Colors.grey,
+                                    ),
                                   ),
                           ),
                           const SizedBox(height: 8),
@@ -167,7 +190,10 @@ class _CatalogTabState extends State<CatalogTab> {
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                         ],
@@ -178,9 +204,13 @@ class _CatalogTabState extends State<CatalogTab> {
               },
             ),
           ],
-          
-          if (filteredCompanies.isEmpty && filteredLatestOffers.isEmpty)
-            const _EmptyState(message: 'No results found matching your search.'),
+
+          if (isSearching &&
+              filteredCompanies.isEmpty &&
+              filteredLatestOffers.isEmpty)
+            const _EmptyState(
+              message: 'No results found matching your search.',
+            ),
         ],
       ),
     );
@@ -222,7 +252,8 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
     ),
   ];
 
-  List<ApiItem> get _items => widget.sections.isNotEmpty ? widget.sections : _defaultPlaceholders;
+  List<ApiItem> get _items =>
+      widget.sections.isNotEmpty ? widget.sections : _defaultPlaceholders;
 
   @override
   void initState() {
@@ -253,21 +284,34 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
     });
   }
 
-  void _handleSectionAction(BuildContext context, String type, String id, String actionName) {
+  void _handleSectionAction(
+    BuildContext context,
+    String type,
+    String id,
+    String actionName,
+  ) {
     if (type == 'product') {
       final placeholderProduct = ApiItem(id: id, title: actionName);
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => ProductDetailsScreen(product: placeholderProduct)),
+        MaterialPageRoute(
+          builder: (_) => ProductDetailsScreen(product: placeholderProduct),
+        ),
       );
     } else if (type == 'category') {
       final placeholderCategory = ApiItem(id: id, title: actionName);
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => CategoryProductsScreen(category: placeholderCategory)),
+        MaterialPageRoute(
+          builder: (_) => CategoryProductsScreen(category: placeholderCategory),
+        ),
       );
     }
   }
 
-  Widget _buildPlaceholderCard(BuildContext context, ApiItem section, int index) {
+  Widget _buildPlaceholderCard(
+    BuildContext context,
+    ApiItem section,
+    int index,
+  ) {
     final List<List<Color>> gradients = [
       [const Color(0xFF2F6F73), const Color(0xFF1B494D)],
       [const Color(0xFFE9A23B), const Color(0xFFB8761E)],
@@ -309,7 +353,10 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
@@ -341,7 +388,8 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                if (section.subtitle != null && section.subtitle!.isNotEmpty) ...[
+                if (section.subtitle != null &&
+                    section.subtitle!.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
                     section.subtitle!,
@@ -393,38 +441,53 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
             itemCount: items.length,
             itemBuilder: (_, index) {
               final section = items[index];
-              
+
               final String? actionType = section.raw['action_type']?.toString();
               final String? actionId = section.raw['action_id']?.toString();
-              final String actionName = section.raw['action_name']?.toString() ?? section.title;
-              final bool isClickable = actionType != null && actionType != 'none' && actionId != null;
+              final String actionName =
+                  section.raw['action_name']?.toString() ?? section.title;
+              final bool isClickable =
+                  actionType != null &&
+                  actionType != 'none' &&
+                  actionId != null;
 
               return Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: !isClickable 
-                    ? null 
-                    : () => _handleSectionAction(context, actionType, actionId, actionName),
+                  onTap: !isClickable
+                      ? null
+                      : () => _handleSectionAction(
+                          context,
+                          actionType,
+                          actionId,
+                          actionName,
+                        ),
                   borderRadius: BorderRadius.circular(20),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(20),
-                    child: (section.imageUrl == null || section.imageUrl!.isEmpty)
+                    child:
+                        (section.imageUrl == null || section.imageUrl!.isEmpty)
                         ? _buildPlaceholderCard(context, section, index)
                         : Image.network(
                             section.imageUrl!,
                             fit: BoxFit.cover,
                             width: double.infinity,
                             height: double.infinity,
-                            errorBuilder: (_, __, ___) => _buildPlaceholderCard(context, section, index),
+                            errorBuilder: (_, __, ___) =>
+                                _buildPlaceholderCard(context, section, index),
                             loadingBuilder: (context, child, loadingProgress) {
                               if (loadingProgress == null) return child;
                               return Container(
-                                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primaryContainer.withOpacity(0.3),
                                 child: const Center(
                                   child: SizedBox(
                                     width: 24,
                                     height: 24,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   ),
                                 ),
                               );
@@ -442,7 +505,11 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
           children: List.generate(
             items.length,
             (index) => GestureDetector(
-              onTap: () => _controller.animateToPage(index, duration: const Duration(milliseconds: 300), curve: Curves.easeOut),
+              onTap: () => _controller.animateToPage(
+                index,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              ),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -464,7 +531,11 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, required this.action, this.onActionTap});
+  const _SectionHeader({
+    required this.title,
+    required this.action,
+    this.onActionTap,
+  });
   final String title;
   final String action;
   final VoidCallback? onActionTap;
@@ -472,10 +543,20 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900))),
+        Expanded(
+          child: Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+          ),
+        ),
         InkWell(
           onTap: onActionTap,
-          child: Text(action, style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+          child: Text(
+            action,
+            style: TextStyle(color: Theme.of(context).colorScheme.primary),
+          ),
         ),
       ],
     );
@@ -490,7 +571,11 @@ class _EmptyState extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(18),
-        child: Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54)),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.black54),
+        ),
       ),
     );
   }
@@ -520,10 +605,7 @@ class _MyPointsCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                primaryColor,
-                Colors.amber.shade800,
-              ],
+              colors: [primaryColor, Colors.amber.shade800],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -544,7 +626,11 @@ class _MyPointsCard extends StatelessWidget {
                   color: Colors.white.withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.stars_rounded, color: Colors.amberAccent, size: 30),
+                child: const Icon(
+                  Icons.stars_rounded,
+                  color: Colors.amberAccent,
+                  size: 30,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -573,7 +659,10 @@ class _MyPointsCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -596,4 +685,3 @@ class _MyPointsCard extends StatelessWidget {
     );
   }
 }
-

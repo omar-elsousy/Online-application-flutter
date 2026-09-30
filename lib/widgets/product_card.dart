@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/api_item.dart';
+import '../models/cart_line.dart';
 import '../controllers/app_scope.dart';
 
 class ProductCard extends StatelessWidget {
@@ -10,7 +11,7 @@ class ProductCard extends StatelessWidget {
     required this.onOpen,
     this.onFavourite,
     this.isFavourite = false,
-    this.quantity = 0,
+    this.quantity = 0.0,
     this.onUpdateQuantity,
   });
 
@@ -19,8 +20,8 @@ class ProductCard extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback? onFavourite;
   final bool isFavourite;
-  final int quantity;
-  final Function(int delta)? onUpdateQuantity;
+  final double quantity;
+  final Function(double delta)? onUpdateQuantity;
 
   bool get isInCart => quantity > 0;
 
@@ -167,7 +168,7 @@ class ProductCard extends StatelessWidget {
                                     onPressed: () => onUpdateQuantity?.call(-1),
                                   ),
                                   Text(
-                                    '$quantity',
+                                    formatCartQuantity(quantity),
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,

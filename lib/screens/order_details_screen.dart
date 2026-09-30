@@ -184,6 +184,13 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
+                            'Code: ${item['product_id'] ?? '—'}',
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                          Text(
                             'Qty: ${item['quantity']} | Price: ${item['unit_price']} EGP',
                           ),
                           if (isGift)

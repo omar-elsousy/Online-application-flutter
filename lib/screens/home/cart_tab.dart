@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../controllers/app_scope.dart';
+import '../../models/cart_line.dart';
 import '../../widgets/app_error_banner.dart';
 import '../../utils/app_dialogs.dart';
 import '../../utils/search_utils.dart';
@@ -62,7 +63,9 @@ class _CartTabState extends State<CartTab> {
                         ),
                         title: Text(gift['name']?.toString() ?? 'Gift'),
                         subtitle: Text(
-                          'Quantity: ${gift['quantity']} • ${gift['unit_price'] ?? 0} EGP (Free)',
+                          'Code: ${gift['product_id'] ?? '—'}\n'
+                          'Quantity: ${gift['quantity']} • '
+                          '${gift['unit_price'] ?? 0} EGP (Free)',
                         ),
                         trailing: IconButton(
                           tooltip: 'Remove gift',
@@ -146,7 +149,7 @@ class _CartTabState extends State<CartTab> {
                                               horizontal: 4,
                                             ),
                                             child: Text(
-                                              '${line.quantity}',
+                                              formatCartQuantity(line.quantity),
                                               style: const TextStyle(
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 18,

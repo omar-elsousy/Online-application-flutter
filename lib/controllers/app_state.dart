@@ -100,7 +100,7 @@ class AppState extends ChangeNotifier {
     return cart.any((line) => line.product.id == productId);
   }
 
-  int getProductQuantity(String productId) {
+  double getProductQuantity(String productId) {
     final index = cart.indexWhere((l) => l.product.id == productId);
     return index != -1 ? cart[index].quantity : 0;
   }
@@ -195,7 +195,7 @@ class AppState extends ChangeNotifier {
               CartLine(
                 product: product,
                 quantity:
-                    int.tryParse(item['quantity']?.toString() ?? '1') ?? 1,
+                    double.tryParse(item['quantity']?.toString() ?? '1') ?? 1,
               ),
             );
           }
@@ -504,7 +504,8 @@ class AppState extends ChangeNotifier {
           cart.add(
             CartLine(
               product: product,
-              quantity: int.tryParse(item['quantity']?.toString() ?? '1') ?? 1,
+              quantity:
+                  double.tryParse(item['quantity']?.toString() ?? '1') ?? 1,
             ),
           );
         }
@@ -544,7 +545,7 @@ class AppState extends ChangeNotifier {
     return ApiItem.fromJson(data);
   }
 
-  Future<void> addToCart(ApiItem product, {int quantity = 1}) async {
+  Future<void> addToCart(ApiItem product, {double quantity = 1}) async {
     final previousCart = List<CartLine>.from(cart);
     final previousCount = serverCartCount;
     final previousTotal = serverCartTotal;
@@ -572,9 +573,9 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> updateCartQuantity(ApiItem product, int delta) async {
+  Future<void> updateCartQuantity(ApiItem product, double delta) async {
     _beginCartPricing(refreshWalletCredits: true);
-    int currentQty = 0;
+    double currentQty = 0;
     int index = cart.indexWhere((l) => l.product.id == product.id);
     if (index != -1) currentQty = cart[index].quantity;
 
@@ -604,7 +605,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> setCartQuantity(ApiItem product, int newQty) async {
+  Future<void> setCartQuantity(ApiItem product, double newQty) async {
     _beginCartPricing(refreshWalletCredits: true);
     _optimisticSet(product, newQty);
     try {
@@ -624,7 +625,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void _optimisticUpdate(ApiItem product, int delta) {
+  void _optimisticUpdate(ApiItem product, double delta) {
     _cartStateRevision++;
     final index = cart.indexWhere((line) => line.product.id == product.id);
     if (index == -1) {
@@ -644,7 +645,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _optimisticSet(ApiItem product, int newQty) {
+  void _optimisticSet(ApiItem product, double newQty) {
     _cartStateRevision++;
     final index = cart.indexWhere((l) => l.product.id == product.id);
     if (newQty <= 0) {

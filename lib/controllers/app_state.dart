@@ -43,6 +43,8 @@ class AppState extends ChangeNotifier {
   String? _updatingWalletCreditKey;
   String? error;
   String? userMobile;
+  String? customerName;
+  String? customerCode;
 
   double serverCartTotal = 0;
   Map<String, dynamic> cartTotals = const {};
@@ -121,6 +123,11 @@ class AppState extends ChangeNotifier {
       final token = _extractToken(payload);
       apiClient.setToken(token);
       userMobile = mobile;
+      final userData = payload is Map ? payload['user'] : null;
+      customerName = userData is Map
+          ? userData['customer_name']?.toString()
+          : null;
+      customerCode = userData is Map ? userData['pos_code']?.toString() : null;
       isBootstrapped = false;
       hasLoadedHome = false;
     });
@@ -757,6 +764,8 @@ class AppState extends ChangeNotifier {
       await apiClient.post(ApiEndpoints.logout).catchError((_) => null);
       apiClient.setToken(null);
       userMobile = null;
+      customerName = null;
+      customerCode = null;
       categories.clear();
       sections.clear();
       orders.clear();

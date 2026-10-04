@@ -19,8 +19,17 @@ class ProfileTab extends StatelessWidget {
       children: [
         Card(
           child: ListTile(
-            title: Text(state.userMobile ?? 'Sales user'),
-            subtitle: null,
+            leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+            title: Text(state.customerName ?? 'Sales user'),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Mobile: ${state.userMobile ?? '-'}'),
+                if (state.customerCode != null &&
+                    state.customerCode!.isNotEmpty)
+                  Text('Customer code: ${state.customerCode}'),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 12),

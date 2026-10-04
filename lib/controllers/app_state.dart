@@ -131,11 +131,28 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> register({
+  Future<List<Map<String, dynamic>>> loadRegistrationCustomers(
+    String mobile,
+  ) async {
+    final payload = await apiClient.post(
+      ApiEndpoints.registrationCustomers,
+      body: {'mobile': mobile},
+    );
+    final rawCustomers = payload is Map ? payload['data'] : null;
+    if (rawCustomers is! List) return const [];
+    return rawCustomers
+        .whereType<Map>()
+        .map((customer) => Map<String, dynamic>.from(customer))
+        .toList();
+  }
+
+  Future<bool> register({
     required String mobile,
     required String password,
     required String passwordConfirmation,
+    required String posCode,
   }) async {
+    var registered = false;
     await _guard(() async {
       await apiClient.post(
         ApiEndpoints.register,
@@ -143,9 +160,12 @@ class AppState extends ChangeNotifier {
           'mobile': mobile,
           'password': password,
           'password_confirmation': passwordConfirmation,
+          'pos_code': posCode,
         },
       );
+      registered = true;
     });
+    return registered;
   }
 
   Future<void> loadHome() async {

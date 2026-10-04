@@ -30,7 +30,6 @@ class ApiEndpoints {
 
   static const String login = '/login';
   static const String register = '/register';
-  static const String registrationCustomers = '/register/customers';
   static const String logout = '/logout';
   static const String categories = '/getCategories';
   static const String sections = '/getSections';

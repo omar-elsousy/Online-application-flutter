@@ -114,11 +114,39 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> login({required String mobile, required String password}) async {
+  Future<List<Map<String, dynamic>>> findLoginCustomers({
+    required String mobile,
+    required String password,
+  }) async {
+    var customers = <Map<String, dynamic>>[];
     await _guard(() async {
       final payload = await apiClient.post(
         ApiEndpoints.login,
         body: {'mobile': mobile, 'password': password},
+      );
+      final rawCustomers = payload is Map ? payload['customers'] : null;
+      if (rawCustomers is List) {
+        customers = rawCustomers
+            .whereType<Map>()
+            .map((customer) => Map<String, dynamic>.from(customer))
+            .toList();
+      }
+      if (customers.isEmpty) {
+        throw const FormatException('No customers are linked to this number.');
+      }
+    });
+    return customers;
+  }
+
+  Future<void> login({
+    required String mobile,
+    required String password,
+    required String posCode,
+  }) async {
+    await _guard(() async {
+      final payload = await apiClient.post(
+        ApiEndpoints.login,
+        body: {'mobile': mobile, 'password': password, 'pos_code': posCode},
       );
       final token = _extractToken(payload);
       apiClient.setToken(token);
@@ -138,26 +166,10 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<List<Map<String, dynamic>>> loadRegistrationCustomers(
-    String mobile,
-  ) async {
-    final payload = await apiClient.post(
-      ApiEndpoints.registrationCustomers,
-      body: {'mobile': mobile},
-    );
-    final rawCustomers = payload is Map ? payload['data'] : null;
-    if (rawCustomers is! List) return const [];
-    return rawCustomers
-        .whereType<Map>()
-        .map((customer) => Map<String, dynamic>.from(customer))
-        .toList();
-  }
-
   Future<bool> register({
     required String mobile,
     required String password,
     required String passwordConfirmation,
-    required String posCode,
   }) async {
     var registered = false;
     await _guard(() async {
@@ -167,7 +179,6 @@ class AppState extends ChangeNotifier {
           'mobile': mobile,
           'password': password,
           'password_confirmation': passwordConfirmation,
-          'pos_code': posCode,
         },
       );
       registered = true;

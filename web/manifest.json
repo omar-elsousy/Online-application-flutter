@@ -1,11 +1,11 @@
 {
-    "name": "mansour",
-    "short_name": "mansour",
+    "name": "Mansour",
+    "short_name": "Mansour",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#004D2C",
+    "theme_color": "#004D2C",
+    "description": "Mansour online sales mobile application.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -41,8 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       height: 96,
                       width: 96,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
                             color: Theme.of(
@@ -53,10 +52,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.storefront,
-                        color: Colors.white,
-                        size: 46,
+                      clipBehavior: Clip.antiAlias,
+                      child: Image.asset(
+                        'assets/branding/app_icon_login.png',
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),

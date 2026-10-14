@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'controllers/app_scope.dart';
@@ -7,9 +9,9 @@ import 'core/theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await NotificationService.instance.init();
+  unawaited(NotificationService.instance.init());
   runApp(MansourApp(state: AppState()));
 }
 

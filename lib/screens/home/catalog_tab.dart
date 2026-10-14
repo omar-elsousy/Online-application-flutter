@@ -313,8 +313,8 @@ class _SectionsCarouselState extends State<_SectionsCarousel> {
     int index,
   ) {
     final List<List<Color>> gradients = [
-      [const Color(0xFF2F6F73), const Color(0xFF1B494D)],
-      [const Color(0xFFE9A23B), const Color(0xFFB8761E)],
+      [const Color(0xFF006238), const Color(0xFF004D2C)],
+      [const Color(0xFFFFC928), const Color(0xFFE99D00)],
       [const Color(0xFF386B8C), const Color(0xFF1E4358)],
     ];
     final List<IconData> icons = [

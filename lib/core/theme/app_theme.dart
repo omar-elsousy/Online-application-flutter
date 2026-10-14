@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 class AppTheme {
   const AppTheme._();
 
-  static const Color primary = Color(0xFF2F6F73);
-  static const Color accent = Color(0xFFE9A23B);
-  static const Color background = Color(0xFFF6F8F7);
-  static const Color ink = Color(0xFF162326);
+  // Brand palette sampled from the app logo: forest green, warm gold, and
+  // a soft green-tinted neutral background.
+  static const Color primary = Color(0xFF006238);
+  static const Color accent = Color(0xFFFFC928);
+  static const Color background = Color(0xFFF4F8F5);
+  static const Color ink = Color(0xFF173326);
 
   static ThemeData light() {
     final scheme = ColorScheme.fromSeed(
@@ -20,6 +22,11 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: background,
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: primary,
+        selectionColor: Color(0x5537A76B),
+        selectionHandleColor: primary,
+      ),
       fontFamily: 'Roboto',
       appBarTheme: const AppBarTheme(
         centerTitle: false,
@@ -45,7 +52,9 @@ class AppTheme {
           backgroundColor: primary,
           foregroundColor: Colors.white,
           minimumSize: const Size.fromHeight(54),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
           textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
         ),
       ),

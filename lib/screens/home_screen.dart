@@ -8,6 +8,7 @@ import 'home/profile_tab.dart';
 import 'home/target_tab.dart';
 import 'notifications_screen.dart';
 import 'order_details_screen.dart';
+import '../widgets/loading_splash_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -185,54 +186,6 @@ class _InitialHomeLoadingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 88,
-                height: 88,
-                decoration: BoxDecoration(
-                  color: colors.primary,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.storefront,
-                  color: Colors.white,
-                  size: 42,
-                ),
-              ),
-              const SizedBox(height: 28),
-              SizedBox(
-                width: 30,
-                height: 30,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  color: colors.primary,
-                ),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                'Loading your data...',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Please wait a moment',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    return const LoadingSplashScreen();
   }
 }

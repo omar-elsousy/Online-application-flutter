@@ -51,7 +51,7 @@ class _LatestOffersScreenState extends State<LatestOffersScreen> {
                           crossAxisCount: 2,
                           crossAxisSpacing: 12,
                           mainAxisSpacing: 12,
-                          childAspectRatio: .68,
+                          childAspectRatio: .60,
                         ),
                     itemCount: offers.length,
                     itemBuilder: (_, index) {

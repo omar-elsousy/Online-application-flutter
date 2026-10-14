@@ -109,7 +109,7 @@ class NotificationService {
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: const Color(0xFF2F6F73),
+        backgroundColor: const Color(0xFF006238),
         duration: const Duration(seconds: 4),
         content: Column(
           mainAxisSize: MainAxisSize.min,
